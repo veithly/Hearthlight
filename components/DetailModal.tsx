@@ -16,11 +16,13 @@ import {
   X, Edit3, Trash2, Save, Calendar, Clock, Target,
   Tag, AlertCircle, CheckCircle, Star, Flag
 } from 'lucide-react-native';
+import MarkdownDisplay from 'react-native-markdown-display';
+import MarkdownEditor from './MarkdownEditor';
 
 export interface DetailField {
   key: string;
   label: string;
-  type: 'text' | 'textarea' | 'select' | 'date' | 'switch' | 'number' | 'tags' | 'readonly';
+  type: 'text' | 'textarea' | 'select' | 'date' | 'switch' | 'number' | 'tags' | 'readonly' | 'markdown';
   value: any;
   options?: { label: string; value: any }[];
   placeholder?: string;
@@ -252,6 +254,27 @@ export default function DetailModal({
           </View>
         );
 
+      case 'markdown':
+        return (
+          <View key={field.key} style={styles.fieldContainer}>
+            <Text style={styles.fieldLabel}>{field.label}</Text>
+            {isFieldEditable ? (
+              <MarkdownEditor
+                value={value?.toString() || ''}
+                onChangeText={(text) => updateField(field.key, text)}
+                placeholder={field.placeholder}
+                style={styles.markdownEditor}
+              />
+            ) : (
+              <View style={styles.markdownPreview}>
+                <MarkdownDisplay style={markdownStyles}>
+                  {value?.toString() || '*No content*'}
+                </MarkdownDisplay>
+              </View>
+            )}
+          </View>
+        );
+
       default:
         return null;
     }
@@ -470,5 +493,62 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#8B5CF6',
     marginLeft: 4,
+  },
+  markdownEditor: {
+    minHeight: 200,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  markdownPreview: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 8,
+    minHeight: 100,
+  },
+});
+
+const markdownStyles = StyleSheet.create({
+  body: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 16,
+    color: '#111827',
+    lineHeight: 24,
+  },
+  heading1: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 24,
+    color: '#111827',
+    marginBottom: 16,
+  },
+  heading2: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 20,
+    color: '#111827',
+    marginBottom: 12,
+  },
+  heading3: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 18,
+    color: '#111827',
+    marginBottom: 8,
+  },
+  code_inline: {
+    fontFamily: 'FiraCode-Regular',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  code_block: {
+    fontFamily: 'FiraCode-Regular',
+    backgroundColor: '#F3F4F6',
+    padding: 12,
+    borderRadius: 8,
+    marginVertical: 8,
+  },
+  paragraph: {
+    marginBottom: 8,
   },
 });

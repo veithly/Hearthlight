@@ -1,83 +1,304 @@
-# Hearthlight
+# Hearthlight - Productivity & Life Coaching App
 
-Hearthlight 是一款以隐私为核心、由 AI 驱动的现代化生产力应用，旨在帮助您通过强大的工具和智能助手来管理任务、日记和目标，从而点亮您的内心世界。
+<div align="center">
+  <img src="./assets/images/icon.png" alt="Hearthlight Logo" width="120" height="120">
 
-## ✨ 主要功能
+  **Illuminate your inner potential and achieve meaningful growth**
 
-### 🤖 多模型 AI 助手
-集成了强大的 AI 助手，支持多种领先的语言模型，为您提供智能化的支持。
+  [![React Native](https://img.shields.io/badge/React%20Native-0.74-blue.svg)](https://reactnative.dev/)
+  [![Expo](https://img.shields.io/badge/Expo-51-black.svg)](https://expo.dev/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
+  [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+</div>
 
-- **多提供商支持**: 无缝切换使用 OpenAI (GPT-3.5, GPT-4), Google (Gemini), Anthropic (Claude) 或任何与 OpenAI 兼容的自定义 API。
-- **智能工具调用**: AI 助手可以直接与应用功能交互，帮您：
-    - **创建任务**: 快速添加带有优先级和分类的任务。
-    - **记录日记**: 生成包含情绪和标签的日记条目。
-    - **设定目标**: 创建并分解您的长期和短期目标。
-    - **分析效率**: 获取关于您生产力状况的即时统计和深度分析。
-- **透明的对话流程**: 所有的 AI 工具调用和执行结果都会清晰地展示在对话流中，让您完全了解 AI 的工作过程。
-- **持久化对话历史**: 您可以随时回顾、继续之前的任何对话。
+## 🌟 Overview
 
-### 🔄 通过 WebDAV 实现数据同步
-通过 WebDAV 协议，您可以完全掌控自己的数据，并在多个设备之间保持同步。
+Hearthlight is a comprehensive productivity and life coaching application that combines task management, diary journaling, goal tracking, and AI-powered life coaching into a unified, beautiful experience. Built with React Native and Expo, it features glass morphism UI effects, intelligent task organization using the Eisenhower Matrix, and a sophisticated AI assistant that functions as your personal life coach.
 
-- **控制您的数据**: 连接到您自己的 WebDAV 服务器（例如 Nextcloud, OwnCloud），确保数据隐私和所有权。
-- **灵活的同步选项**: 支持手动触发同步，或设置按小时、天、周自动同步。
-- **智能冲突解决**: 自动合并本地和服务器的数据，确保您始终拥有最新版本。
+## ✨ Key Features
 
-### 📝 核心生产力工具
-- **任务管理**: 使用四象限法则等方法来组织和优先处理您的任务。
-- **日记**: 记录您的想法和感受，AI 可以为您提供富有洞察力的分析和积极的反馈。
-- **目标设定**: 分解宏大目标，创建清晰、可执行的计划。
+### 📝 **Smart Task Management**
+- **Eisenhower Matrix Organization**: Automatically categorize tasks by urgency and importance
+- **Dynamic Quadrant Display**: Only show quadrants that contain tasks to reduce clutter
+- **Recurring Tasks**: Automatic state reset based on completion intervals
+- **Completed Tasks Archive**: Separate board for reviewing completed tasks with search and filtering
+- **Pomodoro Integration**: Built-in focus timer with customizable settings
 
-### 🔒 隐私与安全
-- **本地优先**: 所有数据都默认存储在您的设备本地。
-- **无数据收集**: 我们不会收集您的任何个人数据或对话内容。
-- **安全凭证管理**: 您的 AI 提供商 API 密钥被安全地存储在设备上。
+### 📖 **Intelligent Diary System**
+- **Markdown Support**: Rich text formatting with live preview
+- **Mood Tracking**: Monitor emotional patterns over time
+- **Tag Organization**: Categorize entries with custom tags
+- **AI-Powered Insights**: Get coaching insights based on diary patterns
 
-## 🛠️ 技术栈
+### 🎯 **Goal Tracking & Habits**
+- **SMART Goals**: Create specific, measurable, achievable goals
+- **Progress Visualization**: Track progress with intuitive charts
+- **Habit Formation**: Build positive habits with streak tracking
+- **Category Organization**: Organize goals by life areas
 
-- **框架**: React Native, Expo
-- **AI 集成**:
-    - 自研的 React Native 兼容版 LangGraph 风格服务，用于复杂 Agent 流程。
-    - Vercel AI SDK，用于与语言模型进行流式交互。
-    - LangChain.js (核心模块)
-- **状态管理**: Zustand
-- **导航**: React Navigation
-- **UI**: Expo Modules, React Native Reanimated, Lucide Icons
+### 🤖 **AI Life Coach**
+- **Proactive Guidance**: Personalized coaching based on your data
+- **Historical Analysis**: AI analyzes patterns in tasks, diary entries, and goals
+- **ReAct Methodology**: Structured reasoning process (Reason → Act → Reflect → Respond)
+- **Fresh Session Management**: Configurable conversation preferences
+- **Motivational Support**: Encouraging, growth-focused interactions
+- **Advanced Prompt Engineering**: Sophisticated conversation management using pure prompt engineering
 
-## 🚀 如何开始
+### ⏰ **Advanced Pomodoro Timer**
+- **Customizable Durations**: Personalize work and break periods
+- **Smart Notifications**: Configurable reminders for productivity activities
+- **Auto-start Options**: Seamless workflow transitions
+- **Session Tracking**: Monitor focus time and productivity patterns
 
-1.  **克隆仓库**
-    ```bash
-    git clone https://github.com/your-username/hearthlight.git
-    cd hearthlight
-    ```
+### 📊 **Activity Tracking**
+- **Comprehensive Logging**: Track all user interactions and achievements
+- **Pattern Recognition**: Identify productivity trends and habits
+- **Progress Insights**: Visual representation of your growth journey
+- **Historical Data**: Access to complete activity timeline
 
-2.  **安装依赖**
-    推荐使用 `pnpm`：
-    ```bash
-    pnpm install
-    ```
-    或者使用 `npm`：
-    ```bash
-    npm install
-    ```
+### 🔄 **Data Synchronization**
+- **WebDAV Support**: Sync data across devices securely
+- **Import/Export**: File-based data portability
+- **Backup & Restore**: Protect your productivity data
+- **Cross-Platform**: Seamless experience across devices
 
-3.  **配置环境变量**
-    在项目根目录创建一个 `.env.local` 文件，并填入您的 AI 提供商 API 密钥。您可以从 `.env.example` (如果存在) 开始。
-    ```
-    OPENAI_API_KEY="sk-..."
-    ANTHROPIC_API_KEY="sk-..."
-    GOOGLE_API_KEY="..."
-    ```
+### 🎨 **Beautiful Design**
+- **Glass Morphism UI**: Modern, elegant visual effects
+- **Icon-First Design**: Clean, intuitive interface
+- **Dark/Light Themes**: Customizable appearance
+- **Responsive Layout**: Optimized for all screen sizes
 
-4.  **启动应用**
-    ```bash
-    npm run dev
-    ```
-    然后根据终端提示，在您的手机或模拟器上打开应用。
+## 🚀 Getting Started
 
-## 📜 可用脚本
+### Prerequisites
 
-- `npm run dev`: 启动 Expo 开发服务器，用于在 iOS、Android 和 Web 上进行开发。
-- `npm run build:web`: 将应用导出为静态 Web 应用。
-- `npm run lint`: 运行 ESLint 检查代码风格。
+- Node.js (v18 or higher)
+- npm or yarn
+- Expo CLI
+- iOS Simulator (for iOS development) or Android Studio (for Android development)
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/hearthlight.git
+   cd hearthlight
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
+
+3. **Start the development server**
+   ```bash
+   npx expo start
+   ```
+
+4. **Run on your preferred platform**
+   - Press `i` for iOS simulator
+   - Press `a` for Android emulator
+   - Scan QR code with Expo Go app on your device
+
+### Configuration
+
+1. **AI Assistant Setup**
+   - Configure your preferred AI provider (OpenAI, Anthropic, Google)
+   - Add API keys in the app settings
+   - Customize conversation preferences
+
+2. **WebDAV Synchronization** (Optional)
+   - Set up WebDAV server credentials
+   - Configure sync frequency and auto-sync preferences
+   - Test connection and perform initial sync
+
+## 🏗️ Technology Stack
+
+### **Frontend**
+- **React Native**: Cross-platform mobile development
+- **Expo**: Development platform and build tools
+- **TypeScript**: Type-safe JavaScript development
+- **React Navigation**: Navigation and routing
+- **Lucide React Native**: Beautiful, consistent icons
+
+### **AI & Intelligence**
+- **Vercel AI SDK**: AI provider integration and streaming
+- **Advanced Prompt Engineering**: Sophisticated ReAct methodology implementation
+- **OpenAI API**: GPT models for life coaching
+- **Anthropic Claude**: Alternative AI provider
+- **Google Generative AI**: Additional AI capabilities
+
+### **Data & Storage**
+- **AsyncStorage**: Local data persistence
+- **WebDAV**: Cross-device synchronization
+- **JSON**: Structured data format
+- **File System**: Import/export functionality
+
+### **UI & Design**
+- **Glass Morphism**: Modern visual effects
+- **Custom Components**: Reusable UI elements
+- **Responsive Design**: Adaptive layouts
+- **Animation**: Smooth user interactions
+
+## 📱 App Structure
+
+```
+hearthlight/
+├── app/                    # Main application screens
+│   ├── (tabs)/            # Tab-based navigation
+│   │   ├── index.tsx      # Diary/Home screen
+│   │   ├── todo.tsx       # Task management
+│   │   ├── ai-assistant.tsx # AI life coach
+│   │   ├── focus.tsx      # Pomodoro timer
+│   │   └── profile.tsx    # Settings & profile
+├── components/            # Reusable UI components
+│   ├── DiaryCard.tsx     # Diary entry display
+│   ├── TaskDetailModal.tsx # Task editing
+│   ├── GlassCard.tsx     # Glass morphism container
+│   └── MarkdownEditor.tsx # Rich text editing
+├── utils/                # Utility functions
+│   ├── storage.ts        # Data persistence
+│   ├── aiService.ts      # AI integration
+│   ├── taskUtils.ts      # Task management logic
+│   ├── activityTracker.ts # User activity logging
+│   └── syncService.ts    # WebDAV synchronization
+├── types/                # TypeScript definitions
+└── assets/              # Images, fonts, and static files
+```
+
+## 🔧 API Documentation
+
+### AI Assistant Tools
+
+The AI assistant has access to several tools for analyzing user data:
+
+#### `getUserActivities(args)`
+- **Purpose**: Retrieve user's recent activities and interactions
+- **Parameters**:
+  - `limit` (optional): Number of activities to return
+  - `type` (optional): Filter by activity type
+  - `days` (optional): Number of days to look back
+
+#### `getTaskHistory(args)`
+- **Purpose**: Analyze task completion patterns
+- **Parameters**:
+  - `period` (optional): 'day', 'week', or 'month'
+  - `status` (optional): 'completed' or 'pending'
+
+#### `getDiaryInsights(args)`
+- **Purpose**: Get insights from diary entries and mood patterns
+- **Parameters**:
+  - `period` (optional): Time period to analyze
+
+#### `getGoalProgress(args)`
+- **Purpose**: Analyze goal progress and achievement patterns
+- **Parameters**:
+  - `period` (optional): Time period to analyze
+
+### ReAct Methodology with Streaming
+
+The AI assistant implements a structured ReAct (Reasoning and Acting) approach with real-time streaming:
+
+1. **🤔 Reason** (Streaming): AI explains its thinking process in real-time
+2. **🔧 Act**: Calls internal tools to gather user data from local storage
+3. **💭 Reflect** (Streaming): Analyzes results and identifies patterns in real-time
+4. **💬 Respond** (Streaming): Provides meaningful insights and actionable advice
+
+**Key Features:**
+- **Real-time Streaming**: See AI reasoning as it happens
+- **Collapsed Tool Results**: Tool outputs displayed in collapsible format
+- **Internal Tool Integration**: Uses local data from tasks, diary, goals, and activities
+- **No Result Repetition**: Tool results shown separately, not in streaming text
+
+**Available Internal Tools:**
+- `getUserActivities`: Recent user activities and engagement patterns
+- `getTaskHistory`: Task completion patterns and productivity trends
+- `getDiaryInsights`: Diary entry analysis and mood patterns
+- `getGoalProgress`: Goal achievement and progress analysis
+
+**Example Flow:**
+```
+User: "How am I doing with my productivity lately?"
+
+🤔 Reasoning (Streaming): "Let me analyze your recent activity patterns..."
+🔧 Action: [Tools: getUserActivities, getTaskHistory] → [Collapsed Results]
+💭 Reflection (Streaming): "Based on the data, I can see strong patterns..."
+💬 Response (Streaming): "Great progress! Your 75% completion rate shows..."
+```
+
+### Storage API
+
+#### Task Management
+```typescript
+StorageService.getTasks(): Promise<Task[]>
+StorageService.saveTasks(tasks: Task[]): Promise<void>
+StorageService.getCompletedTasks(): Promise<CompletedTask[]>
+```
+
+#### Activity Tracking
+```typescript
+activityTracker.recordActivity(activity: UserActivity): Promise<void>
+activityTracker.getRecentActivities(limit?: number): UserActivity[]
+activityTracker.getActivityStats(): ActivityStats
+```
+
+## 🤝 Contributing
+
+We welcome contributions to Hearthlight! Please follow these guidelines:
+
+### Development Workflow
+
+1. **Fork the repository**
+2. **Create a feature branch**
+   ```bash
+   git checkout -b feature/amazing-feature
+   ```
+3. **Make your changes**
+   - Follow TypeScript best practices
+   - Add tests for new functionality
+   - Update documentation as needed
+4. **Test thoroughly**
+   - Test on both iOS and Android
+   - Verify AI assistant functionality
+   - Check data synchronization
+5. **Submit a pull request**
+
+### Code Style
+
+- Use TypeScript for all new code
+- Follow React Native best practices
+- Use meaningful variable and function names
+- Add JSDoc comments for complex functions
+- Maintain consistent indentation (2 spaces)
+
+### Testing
+
+- Test new features on multiple devices
+- Verify AI assistant responses
+- Check data persistence and sync
+- Validate UI across different screen sizes
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **Expo Team**: For the excellent development platform
+- **React Native Community**: For the robust ecosystem
+- **AI Providers**: OpenAI, Anthropic, and Google for AI capabilities
+- **Open Source Contributors**: For the amazing libraries and tools
+
+## 📞 Support
+
+- **Documentation**: Check this README and inline code comments
+- **Issues**: Report bugs and request features via GitHub Issues
+- **Discussions**: Join community discussions for questions and ideas
+
+---
+
+<div align="center">
+  <strong>Built with ❤️ for productivity enthusiasts and personal growth seekers</strong>
+</div>

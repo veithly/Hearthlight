@@ -8,10 +8,11 @@ import {
   ScrollView,
   TextInput,
   Modal,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Play, Pause, RotateCcw, Settings, ChartBar as BarChart3, Plus, Target, Clock, Calendar, Brain } from 'lucide-react-native';
-import { PomodoroSession, Task } from '@/types';
+import { Play, Pause, RotateCcw, Settings, ChartBar as BarChart3, Plus, Target, Clock, Calendar, Brain, Bell, Volume2 } from 'lucide-react-native';
+import { PomodoroSession, Task, AppSettings } from '@/types';
 import { StorageService } from '@/utils/storage';
 import { formatDate, formatDisplayDate } from '@/utils/dateUtils';
 
@@ -28,6 +29,7 @@ interface FocusSession {
 }
 
 export default function FocusScreen() {
+  const [settings, setSettings] = useState<AppSettings | null>(null);
   const [workDuration, setWorkDuration] = useState(25 * 60); // 25 minutes
   const [shortBreakDuration, setShortBreakDuration] = useState(5 * 60); // 5 minutes
   const [longBreakDuration, setLongBreakDuration] = useState(15 * 60); // 15 minutes
@@ -80,13 +82,26 @@ export default function FocusScreen() {
   }, [isActive, timeLeft]);
 
   const loadData = async () => {
-    const [loadedSessions, loadedFocusSessions] = await Promise.all([
+    const [loadedSessions, loadedFocusSessions, loadedSettings] = await Promise.all([
       StorageService.getPomodoroSessions(),
       StorageService.getFocusSessions?.() || Promise.resolve([]),
+      StorageService.getSettings(),
     ]);
 
     setSessions(loadedSessions);
     setFocusSessions(loadedFocusSessions);
+    setSettings(loadedSettings);
+
+    // Initialize timer durations from settings
+    const workDurationSeconds = loadedSettings.pomodoro.workDuration * 60;
+    const shortBreakSeconds = loadedSettings.pomodoro.shortBreakDuration * 60;
+    const longBreakSeconds = loadedSettings.pomodoro.longBreakDuration * 60;
+
+    setWorkDuration(workDurationSeconds);
+    setShortBreakDuration(shortBreakSeconds);
+    setLongBreakDuration(longBreakSeconds);
+    setTimeLeft(workDurationSeconds);
+
     loadTodayStats(loadedSessions);
   };
 
@@ -101,6 +116,38 @@ export default function FocusScreen() {
     setTotalFocusTime(totalTime);
   };
 
+  const savePomodoroSettings = async (newSettings: Partial<AppSettings['pomodoro']>) => {
+    if (!settings) return;
+
+    const updatedSettings = {
+      ...settings,
+      pomodoro: {
+        ...settings.pomodoro,
+        ...newSettings,
+      },
+    };
+
+    setSettings(updatedSettings);
+    await StorageService.saveSettings(updatedSettings);
+
+    // Update timer durations if they changed
+    if (newSettings.workDuration !== undefined) {
+      const workDurationSeconds = newSettings.workDuration * 60;
+      setWorkDuration(workDurationSeconds);
+      if (currentPhase === 'work') setTimeLeft(workDurationSeconds);
+    }
+    if (newSettings.shortBreakDuration !== undefined) {
+      const shortBreakSeconds = newSettings.shortBreakDuration * 60;
+      setShortBreakDuration(shortBreakSeconds);
+      if (currentPhase === 'short-break') setTimeLeft(shortBreakSeconds);
+    }
+    if (newSettings.longBreakDuration !== undefined) {
+      const longBreakSeconds = newSettings.longBreakDuration * 60;
+      setLongBreakDuration(longBreakSeconds);
+      if (currentPhase === 'long-break') setTimeLeft(longBreakSeconds);
+    }
+  };
+
   const handlePhaseComplete = () => {
     setIsActive(false);
 
@@ -111,8 +158,9 @@ export default function FocusScreen() {
 
       saveSession(workDuration);
 
-      // Determine next break type
-      if (newSessionsCount % 4 === 0) {
+      // Determine next break type using settings
+      const longBreakInterval = settings?.pomodoro.longBreakInterval || 4;
+      if (newSessionsCount % longBreakInterval === 0) {
         setCurrentPhase('long-break');
         setTimeLeft(longBreakDuration);
         Alert.alert('Work Complete!', 'Time for a long break!');
@@ -581,6 +629,7 @@ export default function FocusScreen() {
           </View>
 
           <ScrollView style={styles.modalContent}>
+            {/* Timer Durations */}
             <View style={styles.settingGroup}>
               <Text style={styles.settingLabel}>Work Duration</Text>
               <View style={styles.timeSelector}>
@@ -591,10 +640,7 @@ export default function FocusScreen() {
                       styles.timeOption,
                       workDuration === minutes * 60 && styles.selectedTime,
                     ]}
-                    onPress={() => {
-                      setWorkDuration(minutes * 60);
-                      if (currentPhase === 'work') setTimeLeft(minutes * 60);
-                    }}
+                    onPress={() => savePomodoroSettings({ workDuration: minutes })}
                   >
                     <Text style={[
                       styles.timeText,
@@ -617,7 +663,7 @@ export default function FocusScreen() {
                       styles.timeOption,
                       shortBreakDuration === minutes * 60 && styles.selectedTime,
                     ]}
-                    onPress={() => setShortBreakDuration(minutes * 60)}
+                    onPress={() => savePomodoroSettings({ shortBreakDuration: minutes })}
                   >
                     <Text style={[
                       styles.timeText,
@@ -640,7 +686,7 @@ export default function FocusScreen() {
                       styles.timeOption,
                       longBreakDuration === minutes * 60 && styles.selectedTime,
                     ]}
-                    onPress={() => setLongBreakDuration(minutes * 60)}
+                    onPress={() => savePomodoroSettings({ longBreakDuration: minutes })}
                   >
                     <Text style={[
                       styles.timeText,
@@ -650,6 +696,80 @@ export default function FocusScreen() {
                     </Text>
                   </TouchableOpacity>
                 ))}
+              </View>
+            </View>
+
+            {/* Long Break Interval */}
+            <View style={styles.settingGroup}>
+              <Text style={styles.settingLabel}>Long Break After</Text>
+              <View style={styles.timeSelector}>
+                {[2, 3, 4, 5, 6].map((sessions) => (
+                  <TouchableOpacity
+                    key={sessions}
+                    style={[
+                      styles.timeOption,
+                      settings?.pomodoro.longBreakInterval === sessions && styles.selectedTime,
+                    ]}
+                    onPress={() => savePomodoroSettings({ longBreakInterval: sessions })}
+                  >
+                    <Text style={[
+                      styles.timeText,
+                      settings?.pomodoro.longBreakInterval === sessions && styles.selectedTimeText,
+                    ]}>
+                      {sessions} sessions
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Auto-start Options */}
+            <View style={styles.settingGroup}>
+              <View style={styles.switchSetting}>
+                <Text style={styles.settingLabel}>Auto-start Breaks</Text>
+                <Switch
+                  value={settings?.pomodoro.autoStartBreaks || false}
+                  onValueChange={(value) => savePomodoroSettings({ autoStartBreaks: value })}
+                  trackColor={{ false: '#E5E7EB', true: '#8B5CF6' }}
+                  thumbColor={settings?.pomodoro.autoStartBreaks ? '#FFFFFF' : '#F3F4F6'}
+                />
+              </View>
+              <View style={styles.switchSetting}>
+                <Text style={styles.settingLabel}>Auto-start Work</Text>
+                <Switch
+                  value={settings?.pomodoro.autoStartWork || false}
+                  onValueChange={(value) => savePomodoroSettings({ autoStartWork: value })}
+                  trackColor={{ false: '#E5E7EB', true: '#8B5CF6' }}
+                  thumbColor={settings?.pomodoro.autoStartWork ? '#FFFFFF' : '#F3F4F6'}
+                />
+              </View>
+            </View>
+
+            {/* Notification Options */}
+            <View style={styles.settingGroup}>
+              <View style={styles.switchSetting}>
+                <View style={styles.settingWithIcon}>
+                  <Volume2 size={16} color="#8B5CF6" />
+                  <Text style={styles.settingLabel}>Sound Notifications</Text>
+                </View>
+                <Switch
+                  value={settings?.pomodoro.soundEnabled || false}
+                  onValueChange={(value) => savePomodoroSettings({ soundEnabled: value })}
+                  trackColor={{ false: '#E5E7EB', true: '#8B5CF6' }}
+                  thumbColor={settings?.pomodoro.soundEnabled ? '#FFFFFF' : '#F3F4F6'}
+                />
+              </View>
+              <View style={styles.switchSetting}>
+                <View style={styles.settingWithIcon}>
+                  <Bell size={16} color="#8B5CF6" />
+                  <Text style={styles.settingLabel}>Vibration</Text>
+                </View>
+                <Switch
+                  value={settings?.pomodoro.vibrationEnabled || false}
+                  onValueChange={(value) => savePomodoroSettings({ vibrationEnabled: value })}
+                  trackColor={{ false: '#E5E7EB', true: '#8B5CF6' }}
+                  thumbColor={settings?.pomodoro.vibrationEnabled ? '#FFFFFF' : '#F3F4F6'}
+                />
               </View>
             </View>
           </ScrollView>
@@ -1190,5 +1310,15 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Medium',
     fontSize: 12,
     color: '#8B5CF6',
+  },
+  switchSetting: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  settingWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });

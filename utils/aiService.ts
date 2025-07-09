@@ -1,5 +1,8 @@
 import { AIProvider, Task, Goal, DiaryEntry } from '@/types';
 import { streamToResponse, OpenAIStream } from 'ai';
+import { useModelStore } from '@/lib/stores/modelStore';
+import { StorageService } from './storage';
+import { activityTracker } from './activityTracker';
 
 /**
  * A versatile service for interacting with various AI language models.
@@ -166,20 +169,255 @@ export class AIService {
    * @returns A promise that resolves to the AI's complete text response.
    */
   async generateResponse(message: string, conversationHistory: any[]): Promise<string> {
-    const systemPrompt = `You are a helpful AI assistant for a productivity app. You can help users with:
-    - Creating and managing tasks
-    - Writing diary entries
-    - Setting and tracking goals
-    - Providing productivity insights
-    - General conversation and advice
+    const currentDateTime = new Date().toLocaleString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZoneName: 'short'
+    });
 
-    Be helpful, encouraging, and concise in your responses.`;
+    const systemPrompt = `You are a helpful AI life coach and productivity assistant. Current date and time: ${currentDateTime}.
+
+TOOL CALLING INSTRUCTIONS:
+When users ask you to create tasks, diary entries, or goals, you can use XML tool calls to actually perform these actions.
+
+Available tools:
+- createTask: Create a new task (args: title, description, priority, quadrant, dueDate)
+- createDiaryEntry: Create a diary entry (args: title, content, mood, tags)
+- createGoal: Create a new goal (args: title, description, category, type, priority, targetDate)
+- getUserActivities: Get recent user activities and engagement patterns
+- getTaskHistory: Get task completion patterns and productivity trends
+- getDiaryInsights: Get diary entry analysis and mood patterns
+- getGoalProgress: Get goal achievement and progress analysis
+
+To use tools, format your response like this:
+<tool_calls>
+  <tool_call>
+    <name>createTask</name>
+    <arguments>
+      <title>Task title</title>
+      <description>Task description</description>
+      <priority>high</priority>
+      <quadrant>do</quadrant>
+    </arguments>
+  </tool_call>
+</tool_calls>
+
+After tool calls, provide a helpful response explaining what you've done.
+
+Be helpful, encouraging, and concise in your responses.`;
 
     const contextPrompt = conversationHistory.length > 0
-      ? `Previous conversation:\n${conversationHistory.map(msg => `${msg.isUser ? 'User' : 'Assistant'}: ${msg.content}`).join('\n')}\n\nUser: ${message}`
+      ? `Previous conversation:\n${conversationHistory.map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`).join('\n')}\n\nUser: ${message}`
       : message;
 
-    return await this.makeRequest(contextPrompt, systemPrompt);
+    const response = await this.makeRequest(contextPrompt, systemPrompt);
+
+    // Check if response contains XML tool calls
+    if (response.includes('<tool_calls>')) {
+      return await this.processToolCalls(response);
+    }
+
+    return response;
+  }
+
+  /**
+   * Processes XML tool calls in the AI response and executes them
+   * @param response The AI response containing XML tool calls
+   * @returns The processed response with tool results
+   */
+  private async processToolCalls(response: string): Promise<string> {
+    try {
+      const toolCalls = this.parseXMLToolCalls(response);
+      const toolResults = await this.executeTools(toolCalls);
+
+      // Replace tool calls with results in the response
+      let processedResponse = response;
+
+      if (toolResults.length > 0) {
+        const toolResultsText = toolResults.map(result =>
+          `✅ ${result.toolName}: ${result.result}`
+        ).join('\n');
+
+        // Remove the XML tool calls and add results
+        processedResponse = response.replace(/<tool_calls>.*?<\/tool_calls>/s, '');
+        processedResponse += `\n\n${toolResultsText}`;
+      }
+
+      return processedResponse;
+    } catch (error) {
+      console.error('Error processing tool calls:', error);
+      return response; // Return original response if tool processing fails
+    }
+  }
+
+  /**
+   * Parses XML tool calls from AI response
+   * @param xmlContent The response containing XML tool calls
+   * @returns Array of parsed tool calls
+   */
+  private parseXMLToolCalls(xmlContent: string): any[] {
+    const tools: any[] = [];
+
+    try {
+      const toolCallsMatch = xmlContent.match(/<tool_calls>(.*?)<\/tool_calls>/s);
+      if (!toolCallsMatch) return [];
+
+      const toolCallsContent = toolCallsMatch[1];
+      const toolCallMatches = toolCallsContent.match(/<tool_call>(.*?)<\/tool_call>/gs);
+      if (!toolCallMatches) return [];
+
+      for (const toolCallMatch of toolCallMatches) {
+        const nameMatch = toolCallMatch.match(/<name>(.*?)<\/name>/s);
+        const argumentsMatch = toolCallMatch.match(/<arguments>(.*?)<\/arguments>/s);
+
+        if (nameMatch) {
+          const tool: any = {
+            name: nameMatch[1].trim(),
+            arguments: {}
+          };
+
+          if (argumentsMatch) {
+            const argsContent = argumentsMatch[1];
+            const argMatches = argsContent.match(/<(\w+)>(.*?)<\/\1>/gs);
+            if (argMatches) {
+              for (const argMatch of argMatches) {
+                const argTagMatch = argMatch.match(/<(\w+)>(.*?)<\/\1>/s);
+                if (argTagMatch) {
+                  tool.arguments[argTagMatch[1]] = argTagMatch[2].trim();
+                }
+              }
+            }
+          }
+
+          tools.push(tool);
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing XML tool calls:', error);
+    }
+
+    return tools;
+  }
+
+  /**
+   * Executes the parsed tool calls
+   * @param toolCalls Array of tool calls to execute
+   * @returns Array of tool results
+   */
+  private async executeTools(toolCalls: any[]): Promise<{toolName: string, result: string}[]> {
+    const results: {toolName: string, result: string}[] = [];
+
+    for (const tool of toolCalls) {
+      try {
+        let result: string;
+
+        switch (tool.name) {
+          case 'createTask':
+            const { title, description, priority, quadrant, dueDate } = tool.arguments;
+            const currentTasks = await StorageService.getTasks();
+            const newTask = {
+              id: `task-${Date.now()}`,
+              title: title || 'New Task',
+              description: description || '',
+              completed: false,
+              priority: priority || 'medium',
+              quadrant: quadrant || 'do',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              dueDate: dueDate || null,
+            };
+            await StorageService.saveTasks([...currentTasks, newTask]);
+            result = `Successfully created task: "${newTask.title}" in ${newTask.quadrant} quadrant with ${newTask.priority} priority.`;
+            break;
+
+          case 'createDiaryEntry':
+            const { title: diaryTitle, content, mood, tags } = tool.arguments;
+            const currentEntries = await StorageService.getDiaryEntries();
+            const newEntry = {
+              id: `diary-${Date.now()}`,
+              title: diaryTitle || `Diary Entry - ${new Date().toLocaleDateString()}`,
+              content: content || '',
+              mood: mood || 'neutral',
+              tags: tags ? tags.split(',').map((t: string) => t.trim()) : [],
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+            await StorageService.saveDiaryEntries([...currentEntries, newEntry]);
+            result = `Successfully created diary entry: "${newEntry.title}" with mood: ${newEntry.mood}.`;
+            break;
+
+          case 'createGoal':
+            const { title: goalTitle, description: goalDesc, category, type, priority: goalPriority, targetDate } = tool.arguments;
+            const currentGoals = await StorageService.getGoals();
+            const newGoal = {
+              id: `goal-${Date.now()}`,
+              title: goalTitle || 'New Goal',
+              description: goalDesc || '',
+              category: category || 'personal',
+              type: type || 'outcome',
+              priority: goalPriority || 'medium',
+              status: 'active' as const,
+              progress: 0,
+              targetDate: targetDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+            await StorageService.saveGoals([...currentGoals, newGoal]);
+            result = `Successfully created goal: "${newGoal.title}" in ${newGoal.category} category.`;
+            break;
+
+          case 'getUserActivities':
+            const activities = activityTracker.getRecentActivities(
+              tool.arguments?.limit || 20,
+              tool.arguments?.type,
+              tool.arguments?.days ? new Date(Date.now() - tool.arguments.days * 24 * 60 * 60 * 1000) : undefined
+            );
+            const stats = activityTracker.getActivityStats();
+            result = `Recent activities: ${activities.length} activities found. Total activities: ${stats.totalActivities}, AI interactions: ${stats.aiInteractions}.`;
+            break;
+
+          case 'getTaskHistory':
+            const tasks = await StorageService.getTasks();
+            const completedTasks = await StorageService.getCompletedTasks();
+            result = `Task summary: ${tasks.length} active tasks, ${completedTasks.length} completed tasks.`;
+            break;
+
+          case 'getDiaryInsights':
+            const entries = await StorageService.getDiaryEntries();
+            const recentEntries = entries.slice(-7); // Last 7 entries
+            const moods = [...new Set(recentEntries.map((e: any) => e.mood))];
+            result = `Diary insights: ${entries.length} total entries, recent moods: ${moods.join(', ')}.`;
+            break;
+
+          case 'getGoalProgress':
+            const goals = await StorageService.getGoals();
+            const activeGoals = goals.filter((g: any) => g.status === 'active');
+            const avgProgress = activeGoals.length > 0 ?
+              activeGoals.reduce((sum: number, g: any) => sum + g.progress, 0) / activeGoals.length : 0;
+            result = `Goal progress: ${activeGoals.length} active goals, average progress: ${Math.round(avgProgress)}%.`;
+            break;
+
+          default:
+            result = `Tool ${tool.name} not implemented`;
+        }
+
+        results.push({
+          toolName: tool.name,
+          result: result
+        });
+      } catch (error) {
+        results.push({
+          toolName: tool.name,
+          result: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+        });
+      }
+    }
+
+    return results;
   }
 
   /**
@@ -431,8 +669,6 @@ export class AIService {
 export const createAIService = (provider: AIProvider): AIService => {
   return new AIService(provider);
 };
-
-import { useModelStore } from '@/lib/stores/modelStore';
 
 /**
  * Factory function to create a new instance of the AIService for client-side use.

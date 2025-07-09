@@ -15,6 +15,7 @@ import { Plus, Calendar, Search, Sparkles, Lightbulb, CreditCard as Edit3, Trash
 import { DiaryEntry, AIProvider } from '@/types';
 import { StorageService } from '@/utils/storage';
 import { formatDate, formatDisplayDate } from '@/utils/dateUtils';
+import { trackDiaryEntry } from '@/utils/activityTracker';
 import { createAIService } from '@/utils/aiService';
 import DiaryCard from '@/components/DiaryCard';
 import MarkdownEditor from '@/components/MarkdownEditor';
@@ -126,6 +127,11 @@ export default function DiaryScreen() {
 
     setEntries(updatedEntries);
     await StorageService.saveDiaryEntries(updatedEntries);
+
+    // Track diary entry activity
+    if (!editingEntry) {
+      trackDiaryEntry(entry.id, entry.title, entry.mood);
+    }
 
     closeModal();
   };

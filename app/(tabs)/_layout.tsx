@@ -12,20 +12,15 @@ export default function TabLayout() {
           borderTopColor: '#E5E7EB',
           paddingTop: 8,
           paddingBottom: 8,
-          height: 80,
+          height: 60,
         },
         tabBarActiveTintColor: '#8B5CF6',
         tabBarInactiveTintColor: '#6B7280',
-        tabBarLabelStyle: {
-          fontFamily: 'Inter-Medium',
-          fontSize: 12,
-          marginTop: 4,
-        },
+        tabBarShowLabel: false,
       }}>
       <Tabs.Screen
         name="todo"
         options={{
-          title: 'Todo',
           tabBarIcon: ({ size, color }) => (
             <CheckSquare size={size} color={color} />
           ),
@@ -34,7 +29,6 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Diary',
           tabBarIcon: ({ size, color }) => (
             <BookOpen size={size} color={color} />
           ),
@@ -43,7 +37,6 @@ export default function TabLayout() {
       <Tabs.Screen
         name="ai-assistant"
         options={{
-          title: 'AI Assistant',
           tabBarIcon: ({ size, color }) => (
             <Bot size={size + 4} color={color} />
           ),
@@ -52,7 +45,6 @@ export default function TabLayout() {
       <Tabs.Screen
         name="focus"
         options={{
-          title: 'Focus',
           tabBarIcon: ({ size, color }) => (
             <Timer size={size} color={color} />
           ),
@@ -61,7 +53,6 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
           tabBarIcon: ({ size, color }) => (
             <User size={size} color={color} />
           ),

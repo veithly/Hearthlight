@@ -11,18 +11,20 @@ import {
   Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, Filter, Clock, CircleAlert as AlertCircle, Target, Zap, Calendar, TrendingUp, Award, SquareCheck as CheckSquare, Sparkles } from 'lucide-react-native';
-import { Task, Goal, Habit, AIProvider } from '@/types';
+import { Plus, Filter, Clock, CircleAlert as AlertCircle, Target, Zap, Calendar, TrendingUp, Award, SquareCheck as CheckSquare, Sparkles, Archive, Search } from 'lucide-react-native';
+import { Task, Goal, Habit, AIProvider, CompletedTask } from '@/types';
 import { StorageService } from '@/utils/storage';
 import { createAIService } from '@/utils/aiService';
 import { formatDate, formatDisplayDate } from '@/utils/dateUtils';
+import { processTaskCompletion, processRecurringTasks, getQuadrantStats } from '@/utils/taskUtils';
+import { trackTaskCompletion, trackTaskCreation } from '@/utils/activityTracker';
 import TaskCard from '@/components/TaskCard';
 import HabitCard from '@/components/HabitCard';
 import DatePicker from '@/components/DatePicker';
 import TaskDetailModal from '@/components/TaskDetailModal';
 import GlassBackground from '@/components/GlassBackground';
 
-type TodoTab = 'tasks' | 'habits' | 'goals';
+type TodoTab = 'tasks' | 'habits' | 'goals' | 'completed';
 
 const QUADRANTS = [
   {
@@ -61,6 +63,7 @@ export default function TodoScreen() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [completedTasks, setCompletedTasks] = useState<CompletedTask[]>([]);
   const [showNewTask, setShowNewTask] = useState(false);
   const [showNewHabit, setShowNewHabit] = useState(false);
   const [showNewGoal, setShowNewGoal] = useState(false);
@@ -99,14 +102,25 @@ export default function TodoScreen() {
   }, []);
 
   const loadData = async () => {
-    const [loadedTasks, loadedHabits, loadedGoals] = await Promise.all([
+    const [loadedTasks, loadedHabits, loadedGoals, loadedCompletedTasks] = await Promise.all([
       StorageService.getTasks(),
       StorageService.getHabits(),
       StorageService.getGoals(),
+      StorageService.getCompletedTasks(),
     ]);
-    setTasks(loadedTasks);
+
+    // Process recurring tasks to reset those that are due
+    const processedTasks = processRecurringTasks(loadedTasks);
+
+    // Save processed tasks if any were reset
+    if (JSON.stringify(processedTasks) !== JSON.stringify(loadedTasks)) {
+      await StorageService.saveTasks(processedTasks);
+    }
+
+    setTasks(processedTasks);
     setHabits(loadedHabits);
     setGoals(loadedGoals);
+    setCompletedTasks(loadedCompletedTasks);
   };
 
   const saveTask = async () => {
@@ -132,6 +146,9 @@ export default function TodoScreen() {
     const updatedTasks = [...tasks, task];
     setTasks(updatedTasks);
     await StorageService.saveTasks(updatedTasks);
+
+    // Track task creation activity
+    trackTaskCreation(task.id, task.title, task.quadrant);
 
     setShowNewTask(false);
     setNewTask({
@@ -215,13 +232,37 @@ export default function TodoScreen() {
   };
 
   const toggleTask = async (taskId: string) => {
-    const updatedTasks = tasks.map(task =>
-      task.id === taskId
-        ? { ...task, completed: !task.completed, updatedAt: new Date().toISOString() }
-        : task
-    );
-    setTasks(updatedTasks);
-    await StorageService.saveTasks(updatedTasks);
+    try {
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      if (!task.completed) {
+        // Completing the task
+        const { updatedTasks, completedTask } = await processTaskCompletion(taskId, tasks);
+        setTasks(updatedTasks);
+        await StorageService.saveTasks(updatedTasks);
+
+        // Track task completion activity
+        trackTaskCompletion(task.id, task.title, task.quadrant, task.estimatedTime);
+
+        if (completedTask) {
+          // Update completed tasks state
+          setCompletedTasks(prev => [completedTask, ...prev]);
+        }
+      } else {
+        // Uncompleting the task (for recurring tasks)
+        const updatedTasks = tasks.map(t =>
+          t.id === taskId
+            ? { ...t, completed: false, completedAt: undefined, updatedAt: new Date().toISOString() }
+            : t
+        );
+        setTasks(updatedTasks);
+        await StorageService.saveTasks(updatedTasks);
+      }
+    } catch (error) {
+      console.error('Error toggling task:', error);
+      Alert.alert('Error', 'Failed to update task');
+    }
   };
 
   const handleTaskPress = (task: Task) => {
@@ -318,15 +359,7 @@ export default function TodoScreen() {
     return quadrantTasks;
   };
 
-  const getQuadrantStats = (quadrant: string) => {
-    const quadrantTasks = getTasksByQuadrant(quadrant);
-    const completed = quadrantTasks.filter(task => task.completed).length;
-    const total = quadrantTasks.length;
-    const overdue = quadrantTasks.filter(task =>
-      task.dueDate && new Date(task.dueDate) < new Date() && !task.completed
-    ).length;
-    return { completed, total, overdue };
-  };
+
 
   const handleSuggestTasks = async () => {
     try {
@@ -391,8 +424,11 @@ export default function TodoScreen() {
             </View>
 
             <View style={styles.quadrantsGrid}>
-              {QUADRANTS.map((quadrant) => {
-                const stats = getQuadrantStats(quadrant.id);
+              {QUADRANTS.filter((quadrant) => {
+                const stats = getQuadrantStats(tasks, quadrant.id);
+                return stats.total > 0; // Only show quadrants with tasks
+              }).map((quadrant) => {
+                const stats = getQuadrantStats(tasks, quadrant.id);
                 const quadrantTasks = getTasksByQuadrant(quadrant.id);
 
                 return (
@@ -441,6 +477,20 @@ export default function TodoScreen() {
                 );
               })}
             </View>
+
+            {/* Show empty state if no quadrants have tasks */}
+            {QUADRANTS.filter((quadrant) => {
+              const stats = getQuadrantStats(tasks, quadrant.id);
+              return stats.total > 0;
+            }).length === 0 && (
+              <View style={styles.emptyState}>
+                <CheckSquare size={48} color="#D1D5DB" />
+                <Text style={styles.emptyTitle}>No tasks yet</Text>
+                <Text style={styles.emptySubtitle}>
+                  Create your first task to get started with the Eisenhower Matrix
+                </Text>
+              </View>
+            )}
           </View>
         );
 
@@ -544,6 +594,60 @@ export default function TodoScreen() {
           </View>
         );
 
+      case 'completed':
+        return (
+          <View style={styles.tabContent}>
+            <View style={styles.completedHeader}>
+              <Text style={styles.completedTitle}>
+                Completed Tasks ({completedTasks.length})
+              </Text>
+              <TouchableOpacity style={styles.searchButton}>
+                <Search size={20} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.completedList}>
+              {completedTasks.length === 0 ? (
+                <View style={styles.completedEmptyState}>
+                  <Archive size={48} color="#D1D5DB" />
+                  <Text style={styles.emptyStateText}>No completed tasks yet</Text>
+                  <Text style={styles.emptyStateSubtext}>
+                    Complete some tasks to see them here
+                  </Text>
+                </View>
+              ) : (
+                completedTasks.map((task) => (
+                  <View key={task.id} style={styles.completedTaskCard}>
+                    <View style={styles.completedTaskHeader}>
+                      <Text style={styles.completedTaskTitle}>{task.title}</Text>
+                      <Text style={styles.completedTaskDate}>
+                        {formatDisplayDate(task.completedAt)}
+                      </Text>
+                    </View>
+                    {task.description && (
+                      <Text style={styles.completedTaskDescription}>
+                        {task.description}
+                      </Text>
+                    )}
+                    <View style={styles.completedTaskMeta}>
+                      <View style={styles.completedTaskQuadrant}>
+                        <Text style={styles.completedTaskQuadrantText}>
+                          {QUADRANTS.find(q => q.id === task.quadrant)?.subtitle}
+                        </Text>
+                      </View>
+                      {task.timeToComplete && (
+                        <Text style={styles.completedTaskTime}>
+                          {task.timeToComplete}min
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+          </View>
+        );
+
       default:
         return null;
     }
@@ -587,6 +691,7 @@ export default function TodoScreen() {
             { id: 'tasks', label: 'Tasks', icon: CheckSquare },
             { id: 'habits', label: 'Habits', icon: Zap },
             { id: 'goals', label: 'Goals', icon: Target },
+            { id: 'completed', label: 'Completed', icon: Archive },
           ].map((tab) => {
             const IconComponent = tab.icon;
             return (
@@ -1123,6 +1228,13 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginBottom: 8,
   },
+  emptySubtitle: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
   goalTypeTabs: {
     flexDirection: 'row',
     backgroundColor: '#F3F4F6',
@@ -1431,5 +1543,99 @@ const styles = StyleSheet.create({
   },
   selectedTypeText: {
     color: '#111827',
+  },
+  // Completed tasks styles
+  completedHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  completedTitle: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 18,
+    color: '#111827',
+  },
+  searchButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+  },
+  completedList: {
+    flex: 1,
+  },
+  completedEmptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  emptyStateText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 18,
+    color: '#6B7280',
+    marginTop: 16,
+  },
+  emptyStateSubtext: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginTop: 4,
+  },
+  completedTaskCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  completedTaskHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  completedTaskTitle: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#111827',
+    flex: 1,
+    marginRight: 12,
+  },
+  completedTaskDate: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  completedTaskDescription: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  completedTaskMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  completedTaskQuadrant: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  completedTaskQuadrantText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  completedTaskTime: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 12,
+    color: '#8B5CF6',
   },
 });

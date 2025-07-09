@@ -26,6 +26,42 @@ export interface Task {
   estimatedTime?: number;
   aiGenerated?: boolean;
   parentGoalId?: string;
+  // Recurring task properties
+  isRecurring?: boolean;
+  recurringType?: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  recurringInterval?: number; // e.g., every 2 days, every 3 weeks
+  lastCompletedAt?: string;
+  nextDueDate?: string;
+  // Completion tracking
+  completedAt?: string;
+  isOneTime?: boolean; // true for one-time tasks, false for recurring
+}
+
+export interface CompletedTask extends Task {
+  completedAt: string;
+  timeToComplete?: number; // in minutes
+  pomodoroSessionsUsed?: number;
+}
+
+export interface UserActivity {
+  id: string;
+  type: 'task_completed' | 'task_created' | 'diary_entry_created' | 'diary_entry_updated' | 'goal_created' | 'goal_updated' | 'habit_completed' | 'pomodoro_completed' | 'ai_interaction';
+  title: string;
+  description?: string;
+  timestamp: string;
+  metadata?: {
+    taskId?: string;
+    diaryEntryId?: string;
+    goalId?: string;
+    habitId?: string;
+    pomodoroSessionId?: string;
+    aiConversationId?: string;
+    duration?: number; // in minutes
+    quadrant?: string;
+    mood?: string;
+    category?: string;
+    [key: string]: any;
+  };
 }
 
 export interface PomodoroSession {
@@ -111,6 +147,11 @@ export interface AIConfig {
     goalAnalysis: boolean;
     autoSuggestions: boolean;
   };
+  conversation: {
+    startFreshByDefault: boolean;
+    allowContinuePrevious: boolean;
+    autoSaveConversations: boolean;
+  };
 }
 
 export interface WebDAVConfig {
@@ -134,6 +175,39 @@ export interface SyncRecord {
   duration?: number;
 }
 
+export interface PomodoroSettings {
+  workDuration: number; // in minutes
+  shortBreakDuration: number; // in minutes
+  longBreakDuration: number; // in minutes
+  longBreakInterval: number; // after how many work sessions
+  autoStartBreaks: boolean;
+  autoStartWork: boolean;
+  soundEnabled: boolean;
+  vibrationEnabled: boolean;
+  customReminders: {
+    diaryLogging: {
+      enabled: boolean;
+      interval: number; // in minutes
+      message: string;
+    };
+    taskPlanning: {
+      enabled: boolean;
+      interval: number; // in minutes
+      message: string;
+    };
+    goalSetting: {
+      enabled: boolean;
+      interval: number; // in minutes
+      message: string;
+    };
+    regularCheckIn: {
+      enabled: boolean;
+      interval: number; // in minutes
+      message: string;
+    };
+  };
+}
+
 export interface AppSettings {
   theme: {
     primaryColor: string;
@@ -143,6 +217,7 @@ export interface AppSettings {
   };
   webdav: WebDAVConfig;
   ai: AIConfig;
+  pomodoro: PomodoroSettings;
   notifications: {
     enabled: boolean;
     taskReminders: boolean;

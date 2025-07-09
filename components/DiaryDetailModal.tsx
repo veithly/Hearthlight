@@ -47,7 +47,7 @@ export default function DiaryDetailModal({
     {
       key: 'content',
       label: 'Content',
-      type: 'textarea',
+      type: entry.isMarkdown ? 'markdown' : 'textarea',
       value: entry.content,
       placeholder: 'Write your thoughts...',
       required: true,
@@ -120,7 +120,7 @@ export default function DiaryDetailModal({
 
       const allEntries = await StorageService.getDiaryEntries();
       const updatedEntries = allEntries.map(e => e.id === entry.id ? updatedEntry : e);
-      
+
       await StorageService.saveDiaryEntries(updatedEntries);
       onUpdate(updatedEntries);
     } catch (error) {
@@ -132,7 +132,7 @@ export default function DiaryDetailModal({
     try {
       const allEntries = await StorageService.getDiaryEntries();
       const updatedEntries = allEntries.filter(e => e.id !== entry.id);
-      
+
       await StorageService.saveDiaryEntries(updatedEntries);
       onUpdate(updatedEntries);
       onClose();

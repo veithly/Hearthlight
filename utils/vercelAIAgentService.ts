@@ -11,6 +11,7 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { AIProvider, Task, DiaryEntry, Goal } from '@/types';
 import { StorageService } from '@/utils/storage';
+import { activityTracker } from '@/utils/activityTracker';
 
 // Define message types
 interface AgentMessage {
@@ -213,6 +214,280 @@ const executeAnalyzeProductivity = async (args: any) => {
   }
 };
 
+// Get user activities for AI analysis
+const executeGetUserActivities = async (args: any) => {
+  try {
+    const { limit = 20, type, days = 7 } = args;
+
+    let activities;
+    if (type) {
+      activities = activityTracker.getRecentActivities(limit, type);
+    } else if (days) {
+      activities = activityTracker.getActivityTimeline(days);
+    } else {
+      activities = activityTracker.getRecentActivities(limit);
+    }
+
+    const stats = activityTracker.getActivityStats();
+
+    return `Recent user activities: ${JSON.stringify({
+      activities: activities.slice(0, limit),
+      stats,
+      summary: `Found ${activities.length} activities. Most active in: ${
+        Object.entries(stats).reduce((a, b) => stats[a[0]] > stats[b[0]] ? a : b)[0]
+      }`
+    }, null, 2)}`;
+  } catch (error) {
+    return `Failed to get user activities: ${error instanceof Error ? error.message : 'Unknown error'}`;
+  }
+};
+
+// Get task history and patterns
+const executeGetTaskHistory = async (args: any) => {
+  try {
+    const { period = 'week', status } = args;
+    const tasks = await StorageService.getTasks();
+    const completedTasks = await StorageService.getCompletedTasks();
+
+    const now = new Date();
+    let startDate = new Date();
+
+    switch (period) {
+      case 'day':
+        startDate.setDate(now.getDate() - 1);
+        break;
+      case 'week':
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case 'month':
+        startDate.setMonth(now.getMonth() - 1);
+        break;
+    }
+
+    const recentCompleted = completedTasks.filter(task =>
+      new Date(task.completedAt) >= startDate
+    );
+
+    const pendingTasks = tasks.filter(task => !task.completed);
+    const analysis = {
+      period,
+      totalTasks: tasks.length,
+      completedInPeriod: recentCompleted.length,
+      pendingTasks: pendingTasks.length,
+      completionRate: tasks.length > 0 ? (recentCompleted.length / tasks.length) * 100 : 0,
+      quadrantDistribution: {},
+      averageCompletionTime: 0,
+      insights: []
+    };
+
+    // Analyze quadrant distribution
+    ['urgent-important', 'not-urgent-important', 'urgent-not-important', 'not-urgent-not-important'].forEach(quadrant => {
+      analysis.quadrantDistribution[quadrant] = recentCompleted.filter(t => t.quadrant === quadrant).length;
+    });
+
+    // Calculate average completion time
+    const tasksWithTime = recentCompleted.filter(t => t.timeToComplete);
+    if (tasksWithTime.length > 0) {
+      analysis.averageCompletionTime = tasksWithTime.reduce((sum, t) => sum + (t.timeToComplete || 0), 0) / tasksWithTime.length;
+    }
+
+    return `Task history analysis: ${JSON.stringify(analysis, null, 2)}`;
+  } catch (error) {
+    return `Failed to get task history: ${error instanceof Error ? error.message : 'Unknown error'}`;
+  }
+};
+
+// Get diary insights and mood patterns
+const executeGetDiaryInsights = async (args: any) => {
+  try {
+    const { period = 'week' } = args;
+    const entries = await StorageService.getDiaryEntries();
+
+    const now = new Date();
+    let startDate = new Date();
+
+    switch (period) {
+      case 'day':
+        startDate.setDate(now.getDate() - 1);
+        break;
+      case 'week':
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case 'month':
+        startDate.setMonth(now.getMonth() - 1);
+        break;
+    }
+
+    const recentEntries = entries.filter(entry =>
+      new Date(entry.createdAt) >= startDate
+    );
+
+    const moodCounts = {};
+    const tagCounts = {};
+    let totalWords = 0;
+
+    recentEntries.forEach(entry => {
+      // Count moods
+      moodCounts[entry.mood] = (moodCounts[entry.mood] || 0) + 1;
+
+      // Count tags
+      entry.tags.forEach(tag => {
+        tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+      });
+
+      // Count words
+      totalWords += entry.content.split(' ').length;
+    });
+
+    const analysis = {
+      period,
+      totalEntries: recentEntries.length,
+      averageWordsPerEntry: recentEntries.length > 0 ? Math.round(totalWords / recentEntries.length) : 0,
+      moodDistribution: moodCounts,
+      commonTags: Object.entries(tagCounts).sort(([,a], [,b]) => b - a).slice(0, 5),
+      writingFrequency: recentEntries.length / (period === 'day' ? 1 : period === 'week' ? 7 : 30),
+      insights: []
+    };
+
+    // Generate insights
+    const dominantMood = Object.entries(moodCounts).reduce((a, b) => moodCounts[a[0]] > moodCounts[b[0]] ? a : b)?.[0];
+    if (dominantMood) {
+      analysis.insights.push(`Dominant mood: ${dominantMood}`);
+    }
+
+    if (analysis.writingFrequency < 0.5) {
+      analysis.insights.push("Consider writing more regularly to better track your thoughts and feelings.");
+    }
+
+    return `Diary insights: ${JSON.stringify(analysis, null, 2)}`;
+  } catch (error) {
+    return `Failed to get diary insights: ${error instanceof Error ? error.message : 'Unknown error'}`;
+  }
+};
+
+// Get goal progress analysis
+const executeGetGoalProgress = async (args: any) => {
+  try {
+    const { period = 'month' } = args;
+    const goals = await StorageService.getGoals();
+
+    const now = new Date();
+    let startDate = new Date();
+
+    switch (period) {
+      case 'day':
+        startDate.setDate(now.getDate() - 1);
+        break;
+      case 'week':
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case 'month':
+        startDate.setMonth(now.getMonth() - 1);
+        break;
+    }
+
+    const recentGoals = goals.filter(goal =>
+      new Date(goal.createdAt) >= startDate || new Date(goal.updatedAt) >= startDate
+    );
+
+    const analysis = {
+      period,
+      totalGoals: goals.length,
+      activeGoals: goals.filter(g => g.status === 'active').length,
+      completedGoals: goals.filter(g => g.status === 'completed').length,
+      averageProgress: goals.length > 0 ? goals.reduce((sum, g) => sum + g.progress, 0) / goals.length : 0,
+      categoryDistribution: {},
+      insights: []
+    };
+
+    // Analyze category distribution
+    goals.forEach(goal => {
+      analysis.categoryDistribution[goal.category] = (analysis.categoryDistribution[goal.category] || 0) + 1;
+    });
+
+    // Generate insights
+    if (analysis.averageProgress < 30) {
+      analysis.insights.push("Many goals have low progress. Consider breaking them into smaller, actionable steps.");
+    } else if (analysis.averageProgress > 80) {
+      analysis.insights.push("Great progress on goals! Consider setting new challenging objectives.");
+    }
+
+    const stagnantGoals = goals.filter(g => g.progress < 10 &&
+      new Date(g.updatedAt) < new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    );
+
+    if (stagnantGoals.length > 0) {
+      analysis.insights.push(`${stagnantGoals.length} goals haven't been updated recently. Consider reviewing them.`);
+    }
+
+    return `Goal progress analysis: ${JSON.stringify(analysis, null, 2)}`;
+  } catch (error) {
+    return `Failed to get goal progress: ${error instanceof Error ? error.message : 'Unknown error'}`;
+  }
+};
+
+// Enhanced ReAct prompt engineering system
+class ReActProcessor {
+  static generateReasoningPrompt(userMessage: string, availableTools: string[]): string {
+    return `
+REASONING PHASE: Before taking any action, I need to think about what the user is asking and what tools might help.
+
+User's message: "${userMessage}"
+
+Available tools: ${availableTools.join(', ')}
+
+Let me think step by step:
+1. What is the user really asking for?
+2. What information do I need to provide a helpful response?
+3. Which tools would give me the most relevant data?
+4. How can I provide actionable insights?
+
+Based on this analysis, I should:`;
+  }
+
+  static generateReflectionPrompt(toolName: string, toolResult: string, originalQuery: string): string {
+    return `
+REFLECTION PHASE: Now that I have data from ${toolName}, let me analyze what this means for the user.
+
+Original question: "${originalQuery}"
+Tool used: ${toolName}
+Data received: ${toolResult}
+
+Key insights I can extract:
+1. What patterns do I see in this data?
+2. What does this reveal about the user's current situation?
+3. What are the positive aspects I should celebrate?
+4. What areas need improvement or attention?
+5. What specific actions can I recommend?
+
+Based on this reflection, my response should focus on:`;
+  }
+
+  static generateActionableResponse(insights: string[], recommendations: string[]): string {
+    return `
+RESPONSE PHASE: Now I'll provide a helpful, encouraging response with specific insights and actionable advice.
+
+Key insights: ${insights.join(', ')}
+Recommendations: ${recommendations.join(', ')}
+
+My response will be supportive, specific, and actionable.`;
+  }
+
+  static formatToolResultWithReflection(toolName: string, result: string, args: any): string {
+    const contextualReflections = {
+      'getUserActivities': 'This activity data reveals your engagement patterns and productivity rhythms, helping me understand when and how you work best.',
+      'getTaskHistory': 'Your task completion patterns show your productivity trends and reveal opportunities for workflow optimization.',
+      'getDiaryInsights': 'Your diary entries provide deep insights into your emotional patterns and personal growth journey.',
+      'getGoalProgress': 'Your goal progress data shows how you\'re advancing toward your aspirations and where to focus next.',
+      'analyzeProductivity': 'This comprehensive analysis reveals your productivity strengths and specific areas for improvement.'
+    };
+
+    const reflection = contextualReflections[toolName] || 'This data helps me better understand your current situation and provide more personalized guidance.';
+
+    return `${result}\n\n💭 **ReAct Reflection:** ${reflection}`;
+  }
+}
+
 export class VercelAIAgentService {
   private provider: AIProvider;
   private conversationStates: Map<string, ConversationState> = new Map();
@@ -253,45 +528,114 @@ export class VercelAIAgentService {
       day: 'numeric',
     });
 
-    return `You are a helpful AI assistant for a productivity app called "Hearthlight".
+    return `You are an AI Life Coach for the "Hearthlight" productivity app - a supportive, wise, and motivational companion dedicated to helping users illuminate their inner potential and achieve meaningful growth.
 The current date is ${currentDate}.
 
-You can help users with:
-- Creating and managing tasks
-- Writing diary entries
-- Creating and tracking goals
-- Analyzing productivity data
-- Getting app status and insights
+## Your Role as a Life Coach:
+You are not just a task manager, but a holistic life coach who:
+- **Provides proactive guidance** and motivational support
+- **Offers personalized insights** based on user's historical data and patterns
+- **Encourages self-reflection** and mindful productivity
+- **Helps users align their daily actions with deeper values and long-term goals**
+- **Celebrates progress** and helps users learn from setbacks
 
-To use a tool, you must use the following XML format in your response:
+## ReAct Methodology (Reasoning and Acting):
+You MUST follow this structured approach for every user interaction:
+
+### Phase 1: 🤔 REASON (Think Before Acting)
+Before using any tools, explicitly state your reasoning:
+- "I need to understand your current productivity patterns, so let me analyze..."
+- "To give you the best advice, I should first check..."
+- "Based on your question, the most helpful data would be..."
+
+### Phase 2: 🔧 ACT (Use Tools Strategically)
+Call the most relevant tools to gather data:
+- Choose tools that directly address the user's needs
+- Use multiple tools when a comprehensive view is needed
+- Always explain why you're using each tool
+
+### Phase 3: 💭 REFLECT (Analyze and Synthesize)
+After receiving tool results, think critically:
+- What patterns emerge from the data?
+- What are the key insights and trends?
+- What does this reveal about the user's habits and progress?
+- What are the strengths to celebrate?
+- What areas need attention or improvement?
+
+### Phase 4: 💬 RESPOND (Provide Actionable Guidance)
+Deliver a comprehensive, helpful response:
+- Start with positive observations and celebrations
+- Share specific insights from the data analysis
+- Provide 2-3 concrete, actionable recommendations
+- Connect advice to the user's broader goals and well-being
+- Ask follow-up questions to encourage deeper reflection
+
+**Critical Requirements:**
+- NEVER just present raw data - always interpret and contextualize
+- ALWAYS maintain an encouraging, growth-focused tone
+- ALWAYS provide specific, actionable next steps
+- ALWAYS connect insights to the user's personal growth journey
+- **Promotes work-life balance** and sustainable productivity habits
+
+## Core Coaching Principles:
+1. **Empathy First**: Always acknowledge the user's feelings and current situation
+2. **Growth Mindset**: Frame challenges as opportunities for learning and development
+3. **Holistic Approach**: Consider mental, emotional, and physical well-being alongside productivity
+4. **Personalization**: Use historical data to provide contextual, relevant guidance
+5. **Actionable Wisdom**: Provide specific, achievable next steps
+6. **Positive Reinforcement**: Celebrate wins, no matter how small
+
+## Available Tools for Coaching:
+To use a tool, use this XML format:
 <tool_use>
   <name>tool_name</name>
   <arguments>{"arg1": "value1", "arg2": "value2"}</arguments>
 </tool_use>
 
-Available tools:
 - createTask(arguments: {"title": string, "description"?: string, "priority"?: "low" | "medium" | "high", "quadrant"?: "urgent-important" | "not-urgent-important" | "urgent-not-important" | "not-urgent-not-important"})
 - createDiaryEntry(arguments: {"title": string, "content": string, "mood"?: "positive" | "neutral" | "negative", "tags"?: string[]})
 - createGoal(arguments: {"title": string, "description"?: string, "category"?: string, "type"?: "daily" | "weekly" | "monthly" | "yearly", "priority"?: "low" | "medium" | "high"})
-- getAppStatus()
-- analyzeProductivity(arguments: {"period"?: "day" | "week" | "month"})
+- getAppStatus() - Use this to understand the user's current productivity patterns
+- analyzeProductivity(arguments: {"period"?: "day" | "week" | "month"}) - Use this for deeper coaching insights
+- getUserActivities(arguments: {"limit"?: number, "type"?: string, "days"?: number}) - Get user's recent activities and interactions
+- getTaskHistory(arguments: {"period"?: "day" | "week" | "month", "status"?: "completed" | "pending"}) - Analyze task completion patterns
+- getDiaryInsights(arguments: {"period"?: "day" | "week" | "month"}) - Get insights from diary entries and mood patterns
+- getGoalProgress(arguments: {"period"?: "day" | "week" | "month"}) - Analyze goal progress and achievement patterns
 
-When users ask for information about their productivity, call getAppStatus() or analyzeProductivity().
-When they want to create something, call the appropriate creation function.
-Always be helpful, encouraging, and provide actionable insights.
+## Coaching Communication Style:
+- Use warm, encouraging language that feels like talking to a trusted mentor
+- Ask thoughtful questions that promote self-discovery
+- Share relevant insights from psychology and personal development
+- Offer multiple perspectives rather than prescriptive solutions
+- Balance support with gentle accountability
+- Celebrate progress and help users learn from setbacks
 
-For example, to create a task:
+Remember: You're helping users not just to be more productive, but to live more intentionally and find fulfillment in their daily journey. Every interaction is an opportunity to inspire growth and positive change.
+
+Example coaching interaction:
 <tool_use>
-  <name>createTask</name>
-  <arguments>{"title": "Buy groceries", "priority": "medium"}</arguments>
+  <name>getAppStatus</name>
+  <arguments>{}</arguments>
 </tool_use>
 `;
   }
 
-  // Simplified agent execution for providers that don't support tool calling properly
+  // Enhanced ReAct agent execution with structured reasoning
   private async executeAgentStep(message: string, conversationHistory: AgentMessage[]): Promise<{ response: string; toolCalls: ToolCall[] }> {
     const model = this.getModel();
     const systemPrompt = this.getSystemPrompt();
+
+    // Enhanced ReAct prompt for better reasoning
+    const reactPrompt = `
+${message}
+
+Remember to follow the ReAct methodology:
+1. 🤔 REASON: First, explain your thinking about what the user needs
+2. 🔧 ACT: Use tools if needed to gather relevant data
+3. 💭 REFLECT: Analyze the results and identify key insights
+4. 💬 RESPOND: Provide helpful, actionable guidance
+
+Start your response by briefly explaining your reasoning, then proceed with your analysis and advice.`;
 
     // Build conversation context
     const messages = [
@@ -300,7 +644,7 @@ For example, to create a task:
         role: msg.role as 'user' | 'assistant',
         content: msg.content
       })),
-      { role: 'user' as const, content: message }
+      { role: 'user' as const, content: reactPrompt }
     ];
 
     try {
@@ -353,20 +697,37 @@ For example, to create a task:
               case 'analyzeProductivity':
                 result = await executeAnalyzeProductivity(args);
                 break;
+              case 'getUserActivities':
+                result = await executeGetUserActivities(args);
+                break;
+              case 'getTaskHistory':
+                result = await executeGetTaskHistory(args);
+                break;
+              case 'getDiaryInsights':
+                result = await executeGetDiaryInsights(args);
+                break;
+              case 'getGoalProgress':
+                result = await executeGetGoalProgress(args);
+                break;
               default:
                 result = `Unknown function: ${functionName}`;
             }
+
+            // Add ReAct reflection to the result
+            const resultWithReflection = ReActProcessor.formatToolResultWithReflection(functionName, result, args);
 
             const toolCall: ToolCall = {
               id: `tool-${Date.now()}-${Math.random()}`,
               name: functionName,
               args,
-              result
+              result: resultWithReflection
             };
             toolCalls.push(toolCall);
 
-            // Replace the function call with the result
-            modifiedResponse = modifiedResponse.replace(toolCallXml, `✅ ${result}`);
+            // Replace the function call with the result including ReAct reasoning
+            modifiedResponse = modifiedResponse.replace(toolCallXml,
+              `🤔 **Reasoning:** Let me analyze your ${functionName.replace(/([A-Z])/g, ' $1').toLowerCase()} to provide better insights...\n\n✅ ${resultWithReflection}`
+            );
           } catch (error) {
             const errorMessage = `Failed to execute ${functionName}: ${error instanceof Error ? error.message : 'Unknown error'}`;
             modifiedResponse = modifiedResponse.replace(toolCallXml, `❌ ${errorMessage}`);
@@ -475,6 +836,18 @@ For example, to create a task:
       await StorageService.saveConversation(threadId, state.messages);
     } catch (error) {
       console.error(`Failed to save conversation history for ${threadId}:`, error);
+    }
+  }
+
+  // Test method to demonstrate ReAct functionality
+  async testReActPattern(): Promise<string> {
+    const testMessage = "How am I doing with my productivity lately?";
+
+    try {
+      const { response } = await this.executeAgentStep(testMessage, []);
+      return `ReAct Test Successful!\n\nUser Query: "${testMessage}"\n\nAI Response:\n${response}`;
+    } catch (error) {
+      return `ReAct Test Failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
     }
   }
 }

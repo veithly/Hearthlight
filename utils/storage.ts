@@ -12,6 +12,8 @@ const STORAGE_KEYS = {
   SYNC_RECORDS: 'sync_records',
   CONVERSATIONS: 'conversations',
   FOCUS_SESSIONS: 'focus_sessions',
+  COMPLETED_TASKS: 'completed_tasks',
+  USER_ACTIVITIES: 'user_activities',
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -30,6 +32,38 @@ export const DEFAULT_SETTINGS: AppSettings = {
     syncInterval: 60,
     syncFrequency: 'daily',
   },
+  pomodoro: {
+    workDuration: 25,
+    shortBreakDuration: 5,
+    longBreakDuration: 15,
+    longBreakInterval: 4,
+    autoStartBreaks: false,
+    autoStartWork: false,
+    soundEnabled: true,
+    vibrationEnabled: true,
+    customReminders: {
+      diaryLogging: {
+        enabled: true,
+        interval: 120, // 2 hours
+        message: "Time to reflect! Consider writing a diary entry about your recent experiences.",
+      },
+      taskPlanning: {
+        enabled: true,
+        interval: 180, // 3 hours
+        message: "Take a moment to review and plan your tasks for optimal productivity.",
+      },
+      goalSetting: {
+        enabled: true,
+        interval: 480, // 8 hours
+        message: "Reflect on your goals and progress. Consider setting new milestones.",
+      },
+      regularCheckIn: {
+        enabled: true,
+        interval: 60, // 1 hour
+        message: "How are you feeling? Take a moment for a quick self-check-in.",
+      },
+    },
+  },
   notifications: {
     enabled: true,
     taskReminders: true,
@@ -46,6 +80,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
       diaryAssistance: true,
       goalAnalysis: true,
       autoSuggestions: true,
+    },
+    conversation: {
+      startFreshByDefault: true,
+      allowContinuePrevious: true,
+      autoSaveConversations: true,
     },
   },
   reminders: [],
@@ -309,6 +348,42 @@ export const StorageService = {
     } catch (error) {
       console.error('Error saving all data:', error);
       throw error;
+    }
+  },
+
+  async getCompletedTasks() {
+    try {
+      const data = await AsyncStorage.getItem(STORAGE_KEYS.COMPLETED_TASKS);
+      return data ? JSON.parse(data) : [];
+    } catch (error) {
+      console.error('Error loading completed tasks:', error);
+      return [];
+    }
+  },
+
+  async saveCompletedTasks(completedTasks: any[]) {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.COMPLETED_TASKS, JSON.stringify(completedTasks));
+    } catch (error) {
+      console.error('Error saving completed tasks:', error);
+    }
+  },
+
+  async getUserActivities() {
+    try {
+      const data = await AsyncStorage.getItem(STORAGE_KEYS.USER_ACTIVITIES);
+      return data ? JSON.parse(data) : [];
+    } catch (error) {
+      console.error('Error loading user activities:', error);
+      return [];
+    }
+  },
+
+  async saveUserActivities(activities: any[]) {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.USER_ACTIVITIES, JSON.stringify(activities));
+    } catch (error) {
+      console.error('Error saving user activities:', error);
     }
   },
 };

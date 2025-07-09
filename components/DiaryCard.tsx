@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Smile, Meh, Frown, Zap, CircleAlert as AlertCircle, Sparkles } from 'lucide-react-native';
+import MarkdownDisplay from 'react-native-markdown-display';
 import { DiaryEntry } from '@/types';
 import { formatDisplayDate } from '@/utils/dateUtils';
 import GlassCard from './GlassCard';
@@ -30,6 +31,44 @@ const MoodIcon = ({ mood }: { mood: DiaryEntry['mood'] }) => {
   }
 };
 
+const markdownStyles = StyleSheet.create({
+  body: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 14,
+    color: '#4B5563',
+    lineHeight: 20,
+  },
+  heading1: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    color: '#111827',
+    marginBottom: 4,
+  },
+  heading2: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 15,
+    color: '#111827',
+    marginBottom: 4,
+  },
+  heading3: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: '#111827',
+    marginBottom: 4,
+  },
+  code_inline: {
+    fontFamily: 'FiraCode-Regular',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 2,
+    paddingVertical: 1,
+    borderRadius: 2,
+    fontSize: 12,
+  },
+  paragraph: {
+    marginBottom: 4,
+  },
+});
+
 export default function DiaryCard({ entry, onPress, onAnalyze }: DiaryCardProps) {
   return (
     <GlassCard onPress={onPress}>
@@ -42,9 +81,17 @@ export default function DiaryCard({ entry, onPress, onAnalyze }: DiaryCardProps)
         {entry.title}
       </Text>
 
-      <Text style={styles.content} numberOfLines={3}>
-        {entry.content}
-      </Text>
+      <View style={styles.contentContainer}>
+        {entry.isMarkdown ? (
+          <MarkdownDisplay style={markdownStyles}>
+            {entry.content}
+          </MarkdownDisplay>
+        ) : (
+          <Text style={styles.content} numberOfLines={3}>
+            {entry.content}
+          </Text>
+        )}
+      </View>
 
       <View style={styles.footer}>
         {entry.tags.length > 0 && (
@@ -93,6 +140,11 @@ const styles = StyleSheet.create({
     color: '#4B5563',
     lineHeight: 20,
     marginBottom: 12,
+  },
+  contentContainer: {
+    marginBottom: 12,
+    maxHeight: 60, // Limit height for card preview
+    overflow: 'hidden',
   },
   tagsContainer: {
     flexDirection: 'row',

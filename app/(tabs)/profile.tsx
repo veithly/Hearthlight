@@ -16,12 +16,13 @@ import {
   User, Settings, FileText, Cloud, Wifi, WifiOff,
   CircleCheck as CheckCircle, Circle as XCircle, Calendar,
   Plus, Bell, RefreshCw, Clock, Download, Upload, Trash2,
-  FileDown, FileUp
+  FileDown, FileUp, CheckSquare, BookOpen, Target, Zap, Bot
 } from 'lucide-react-native';
-import { PersonalSummary, AppSettings, SyncRecord, AIProvider } from '@/types';
+import { PersonalSummary, AppSettings, SyncRecord, AIProvider, UserActivity } from '@/types';
 import { StorageService } from '@/utils/storage';
 import { createWebDAVService } from '@/utils/webdav';
 import { syncService } from '@/utils/syncService';
+import { activityTracker } from '@/utils/activityTracker';
 import { formatDisplayDate } from '@/utils/dateUtils';
 import { ImportExportService } from '@/utils/importExportService';
 import ModelSelector from '@/components/ModelSelector';
@@ -39,6 +40,7 @@ export default function ProfileScreen() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [recentActivities, setRecentActivities] = useState<UserActivity[]>([]);
 
   const [newSummary, setNewSummary] = useState({
     title: '',
@@ -87,6 +89,10 @@ export default function ProfileScreen() {
       syncInterval: loadedSettings.webdav.syncInterval,
       syncFrequency: loadedSettings.webdav.syncFrequency,
     });
+
+    // Load recent activities
+    const activities = activityTracker.getRecentActivities(10);
+    setRecentActivities(activities);
   };
 
   const loadSyncStatus = async () => {
@@ -397,17 +403,36 @@ export default function ProfileScreen() {
 
             <View style={styles.recentSection}>
               <Text style={styles.sectionTitle}>Recent Activity</Text>
-              {summaries.slice(0, 3).map((summary) => (
-                <View key={summary.id} style={styles.activityItem}>
-                  <Calendar size={16} color="#6B7280" />
-                  <View style={styles.activityContent}>
-                    <Text style={styles.activityTitle}>{summary.title}</Text>
-                    <Text style={styles.activityDate}>
-                      {formatDisplayDate(summary.date)} • {summary.period}
-                    </Text>
-                  </View>
+              {recentActivities.length === 0 ? (
+                <View style={styles.emptyActivity}>
+                  <Text style={styles.emptyActivityText}>No recent activity</Text>
                 </View>
-              ))}
+              ) : (
+                recentActivities.slice(0, 5).map((activity) => (
+                  <View key={activity.id} style={styles.activityItem}>
+                    <View style={styles.activityIcon}>
+                      {activity.type === 'task_completed' && <CheckSquare size={16} color="#10B981" />}
+                      {activity.type === 'task_created' && <Plus size={16} color="#3B82F6" />}
+                      {activity.type === 'diary_entry_created' && <BookOpen size={16} color="#F59E0B" />}
+                      {activity.type === 'goal_created' && <Target size={16} color="#8B5CF6" />}
+                      {activity.type === 'habit_completed' && <Zap size={16} color="#10B981" />}
+                      {activity.type === 'pomodoro_completed' && <Clock size={16} color="#EF4444" />}
+                      {activity.type === 'ai_interaction' && <Bot size={16} color="#6366F1" />}
+                    </View>
+                    <View style={styles.activityContent}>
+                      <Text style={styles.activityTitle}>{activity.title}</Text>
+                      <Text style={styles.activityDate}>
+                        {formatDisplayDate(activity.timestamp)}
+                      </Text>
+                      {activity.description && (
+                        <Text style={styles.activityDescription}>
+                          {activity.description}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                ))
+              )}
             </View>
           </View>
         );
@@ -680,10 +705,204 @@ export default function ProfileScreen() {
 
             <View style={styles.settingsSection}>
               <View style={styles.settingsSectionHeader}>
+                <Clock size={20} color="#8B5CF6" />
+                <Text style={styles.settingsSectionTitle}>Productivity Reminders</Text>
+              </View>
+
+              <View style={styles.settingItem}>
+                <Text style={styles.settingLabel}>Diary Logging Reminders</Text>
+                <Switch
+                  value={settings?.pomodoro?.customReminders?.diaryLogging?.enabled || false}
+                  onValueChange={(value) => {
+                    if (settings) {
+                      const updatedSettings = {
+                        ...settings,
+                        pomodoro: {
+                          ...settings.pomodoro,
+                          customReminders: {
+                            ...settings.pomodoro.customReminders,
+                            diaryLogging: {
+                              ...settings.pomodoro.customReminders.diaryLogging,
+                              enabled: value,
+                            },
+                          },
+                        },
+                      };
+                      setSettings(updatedSettings);
+                      StorageService.saveSettings(updatedSettings);
+                    }
+                  }}
+                  trackColor={{ false: '#E5E7EB', true: '#8B5CF6' }}
+                  thumbColor={settings?.pomodoro?.customReminders?.diaryLogging?.enabled ? '#FFFFFF' : '#F3F4F6'}
+                />
+              </View>
+
+              <View style={styles.settingItem}>
+                <Text style={styles.settingLabel}>Task Planning Reminders</Text>
+                <Switch
+                  value={settings?.pomodoro?.customReminders?.taskPlanning?.enabled || false}
+                  onValueChange={(value) => {
+                    if (settings) {
+                      const updatedSettings = {
+                        ...settings,
+                        pomodoro: {
+                          ...settings.pomodoro,
+                          customReminders: {
+                            ...settings.pomodoro.customReminders,
+                            taskPlanning: {
+                              ...settings.pomodoro.customReminders.taskPlanning,
+                              enabled: value,
+                            },
+                          },
+                        },
+                      };
+                      setSettings(updatedSettings);
+                      StorageService.saveSettings(updatedSettings);
+                    }
+                  }}
+                  trackColor={{ false: '#E5E7EB', true: '#8B5CF6' }}
+                  thumbColor={settings?.pomodoro?.customReminders?.taskPlanning?.enabled ? '#FFFFFF' : '#F3F4F6'}
+                />
+              </View>
+
+              <View style={styles.settingItem}>
+                <Text style={styles.settingLabel}>Goal Setting Reminders</Text>
+                <Switch
+                  value={settings?.pomodoro?.customReminders?.goalSetting?.enabled || false}
+                  onValueChange={(value) => {
+                    if (settings) {
+                      const updatedSettings = {
+                        ...settings,
+                        pomodoro: {
+                          ...settings.pomodoro,
+                          customReminders: {
+                            ...settings.pomodoro.customReminders,
+                            goalSetting: {
+                              ...settings.pomodoro.customReminders.goalSetting,
+                              enabled: value,
+                            },
+                          },
+                        },
+                      };
+                      setSettings(updatedSettings);
+                      StorageService.saveSettings(updatedSettings);
+                    }
+                  }}
+                  trackColor={{ false: '#E5E7EB', true: '#8B5CF6' }}
+                  thumbColor={settings?.pomodoro?.customReminders?.goalSetting?.enabled ? '#FFFFFF' : '#F3F4F6'}
+                />
+              </View>
+
+              <View style={styles.settingItem}>
+                <Text style={styles.settingLabel}>Regular Check-in Reminders</Text>
+                <Switch
+                  value={settings?.pomodoro?.customReminders?.regularCheckIn?.enabled || false}
+                  onValueChange={(value) => {
+                    if (settings) {
+                      const updatedSettings = {
+                        ...settings,
+                        pomodoro: {
+                          ...settings.pomodoro,
+                          customReminders: {
+                            ...settings.pomodoro.customReminders,
+                            regularCheckIn: {
+                              ...settings.pomodoro.customReminders.regularCheckIn,
+                              enabled: value,
+                            },
+                          },
+                        },
+                      };
+                      setSettings(updatedSettings);
+                      StorageService.saveSettings(updatedSettings);
+                    }
+                  }}
+                  trackColor={{ false: '#E5E7EB', true: '#8B5CF6' }}
+                  thumbColor={settings?.pomodoro?.customReminders?.regularCheckIn?.enabled ? '#FFFFFF' : '#F3F4F6'}
+                />
+              </View>
+            </View>
+
+            <View style={styles.settingsSection}>
+              <View style={styles.settingsSectionHeader}>
                 <User size={20} color="#8B5CF6" />
-                <Text style={styles.settingsSectionTitle}>AI Model</Text>
+                <Text style={styles.settingsSectionTitle}>AI Assistant</Text>
               </View>
               <ModelSelector />
+
+              <View style={styles.settingItem}>
+                <Text style={styles.settingLabel}>Start Fresh Conversations by Default</Text>
+                <Switch
+                  value={settings?.ai.conversation?.startFreshByDefault || false}
+                  onValueChange={(value) => {
+                    if (settings) {
+                      const updatedSettings = {
+                        ...settings,
+                        ai: {
+                          ...settings.ai,
+                          conversation: {
+                            ...settings.ai.conversation,
+                            startFreshByDefault: value,
+                          },
+                        },
+                      };
+                      setSettings(updatedSettings);
+                      StorageService.saveSettings(updatedSettings);
+                    }
+                  }}
+                  trackColor={{ false: '#E5E7EB', true: '#8B5CF6' }}
+                  thumbColor={settings?.ai.conversation?.startFreshByDefault ? '#FFFFFF' : '#F3F4F6'}
+                />
+              </View>
+
+              <View style={styles.settingItem}>
+                <Text style={styles.settingLabel}>Allow Continue Previous Conversations</Text>
+                <Switch
+                  value={settings?.ai.conversation?.allowContinuePrevious || false}
+                  onValueChange={(value) => {
+                    if (settings) {
+                      const updatedSettings = {
+                        ...settings,
+                        ai: {
+                          ...settings.ai,
+                          conversation: {
+                            ...settings.ai.conversation,
+                            allowContinuePrevious: value,
+                          },
+                        },
+                      };
+                      setSettings(updatedSettings);
+                      StorageService.saveSettings(updatedSettings);
+                    }
+                  }}
+                  trackColor={{ false: '#E5E7EB', true: '#8B5CF6' }}
+                  thumbColor={settings?.ai.conversation?.allowContinuePrevious ? '#FFFFFF' : '#F3F4F6'}
+                />
+              </View>
+
+              <View style={styles.settingItem}>
+                <Text style={styles.settingLabel}>Auto-save Conversations</Text>
+                <Switch
+                  value={settings?.ai.conversation?.autoSaveConversations || false}
+                  onValueChange={(value) => {
+                    if (settings) {
+                      const updatedSettings = {
+                        ...settings,
+                        ai: {
+                          ...settings.ai,
+                          conversation: {
+                            ...settings.ai.conversation,
+                            autoSaveConversations: value,
+                          },
+                        },
+                      };
+                      setSettings(updatedSettings);
+                      StorageService.saveSettings(updatedSettings);
+                    }
+                  }}
+                  trackColor={{ false: '#E5E7EB', true: '#8B5CF6' }}
+                  thumbColor={settings?.ai.conversation?.autoSaveConversations ? '#FFFFFF' : '#F3F4F6'}
+                />
+              </View>
             </View>
           </View>
         );
@@ -1486,6 +1705,28 @@ const styles = StyleSheet.create({
   },
   selectedFrequencyText: {
     color: '#111827',
+  },
+  // Activity tracking styles
+  activityIcon: {
+    marginRight: 12,
+    padding: 8,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+  },
+  activityDescription: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 2,
+  },
+  emptyActivity: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  emptyActivityText: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 14,
+    color: '#9CA3AF',
   },
 
 });
