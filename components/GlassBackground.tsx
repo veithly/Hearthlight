@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { useTheme } from '@/lib/theme';
 
 interface GlassBackgroundProps {
   children: React.ReactNode;
@@ -17,22 +18,28 @@ interface GlassBackgroundProps {
 export default function GlassBackground({
   children,
   style,
-  gradientColors = [
-    'rgba(139, 92, 246, 0.1)',
-    'rgba(59, 130, 246, 0.1)',
-    'rgba(16, 185, 129, 0.1)',
-  ],
+  gradientColors,
   gradientStart = { x: 0, y: 0 },
   gradientEnd = { x: 1, y: 1 },
   blurIntensity = 10,
-  blurTint = 'light',
+  blurTint,
   showBlur = true,
 }: GlassBackgroundProps) {
+  const { colors, isDarkMode } = useTheme();
+  
+  // Use theme-aware defaults
+  const defaultGradientColors = gradientColors || [
+    colors.background,
+    colors.glassmorphism.background,
+    colors.background,
+  ];
+  
+  const defaultBlurTint = blurTint || (isDarkMode ? 'dark' : 'light');
   return (
-    <View style={[styles.container, style]}>
+    <View style={[styles.container, { backgroundColor: colors.background }, style]}>
       {/* Gradient Background */}
       <LinearGradient
-        colors={gradientColors}
+        colors={defaultGradientColors}
         start={gradientStart}
         end={gradientEnd}
         style={StyleSheet.absoluteFillObject}
@@ -42,7 +49,7 @@ export default function GlassBackground({
       {showBlur && (
         <BlurView
           intensity={blurIntensity}
-          tint={blurTint}
+          tint={defaultBlurTint}
           style={StyleSheet.absoluteFillObject}
         />
       )}

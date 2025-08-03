@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { useTheme } from '@/lib/theme';
 
 interface GlassmorphismViewProps {
   children: React.ReactNode;
@@ -33,6 +34,7 @@ export default function GlassmorphismView({
   shadowOffset = { width: 0, height: 4 },
   elevation = 5,
 }: GlassmorphismViewProps) {
+  const { colors } = useTheme();
   const glassmorphismStyle: ViewStyle = {
     borderRadius,
     borderWidth,

@@ -5,6 +5,9 @@ import MarkdownDisplay from 'react-native-markdown-display';
 import { DiaryEntry } from '@/types';
 import { formatDisplayDate } from '@/utils/dateUtils';
 import GlassCard from './GlassCard';
+import { useTheme } from '@/lib/theme';
+import ThemedView from './ThemedView';
+import ThemedText from './ThemedText';
 
 interface DiaryCardProps {
   entry: DiaryEntry;
@@ -13,67 +16,148 @@ interface DiaryCardProps {
 }
 
 const MoodIcon = ({ mood }: { mood: DiaryEntry['mood'] }) => {
-  const iconProps = { size: 20, color: '#6B7280' };
+  const { colors } = useTheme();
+  const iconProps = { size: 20 };
 
   switch (mood) {
     case 'happy':
-      return <Smile {...iconProps} color="#10B981" />;
+      return <Smile {...iconProps} color={colors.semantic.success} />;
     case 'excited':
-      return <Zap {...iconProps} color="#F59E0B" />;
+      return <Zap {...iconProps} color={colors.semantic.warning} />;
     case 'neutral':
-      return <Meh {...iconProps} color="#6B7280" />;
+      return <Meh {...iconProps} color={colors.text.tertiary} />;
     case 'stressed':
-      return <AlertCircle {...iconProps} color="#EF4444" />;
+      return <AlertCircle {...iconProps} color={colors.semantic.error} />;
     case 'sad':
-      return <Frown {...iconProps} color="#8B5CF6" />;
+      return <Frown {...iconProps} color={colors.accent[500]} />;
     default:
-      return <Meh {...iconProps} />;
+      return <Meh {...iconProps} color={colors.text.tertiary} />;
   }
 };
 
-const markdownStyles = StyleSheet.create({
-  body: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    color: '#4B5563',
-    lineHeight: 20,
-  },
-  heading1: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#111827',
-    marginBottom: 4,
-  },
-  heading2: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 15,
-    color: '#111827',
-    marginBottom: 4,
-  },
-  heading3: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-    color: '#111827',
-    marginBottom: 4,
-  },
-  code_inline: {
-    fontFamily: 'FiraCode-Regular',
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 2,
-    paddingVertical: 1,
-    borderRadius: 2,
-    fontSize: 12,
-  },
-  paragraph: {
-    marginBottom: 4,
-  },
-});
 
 export default function DiaryCard({ entry, onPress, onAnalyze }: DiaryCardProps) {
+  const { colors } = useTheme();
+  
+  const markdownStyles = StyleSheet.create({
+    body: {
+      fontFamily: 'Inter-Regular',
+      fontSize: 14,
+      color: colors.text.secondary,
+      lineHeight: 20,
+    },
+    heading1: {
+      fontFamily: 'Poppins-SemiBold',
+      fontSize: 16,
+      color: colors.text.primary,
+      marginBottom: 4,
+    },
+    heading2: {
+      fontFamily: 'Poppins-SemiBold',
+      fontSize: 15,
+      color: colors.text.primary,
+      marginBottom: 4,
+    },
+    heading3: {
+      fontFamily: 'Poppins-SemiBold',
+      fontSize: 14,
+      color: colors.text.primary,
+      marginBottom: 4,
+    },
+    code_inline: {
+      fontFamily: 'FiraCode-Regular',
+      backgroundColor: colors.neutral[100],
+      paddingHorizontal: 2,
+      paddingVertical: 1,
+      borderRadius: 2,
+      fontSize: 12,
+    },
+    paragraph: {
+      marginBottom: 4,
+    },
+  });
+
+  const styles = StyleSheet.create({
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    date: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 14,
+      color: colors.text.tertiary,
+    },
+    title: {
+      fontFamily: 'Poppins-SemiBold',
+      fontSize: 18,
+      color: colors.text.primary,
+      marginBottom: 8,
+    },
+    content: {
+      fontFamily: 'Inter-Regular',
+      fontSize: 14,
+      color: colors.text.secondary,
+      lineHeight: 20,
+      marginBottom: 12,
+    },
+    contentContainer: {
+      marginBottom: 12,
+      maxHeight: 60, // Limit height for card preview
+      overflow: 'hidden',
+    },
+    tagsContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+    },
+    tag: {
+      backgroundColor: colors.neutral[100],
+      borderRadius: 12,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      marginRight: 8,
+      marginBottom: 4,
+    },
+    tagText: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 12,
+      color: colors.text.tertiary,
+    },
+    moreText: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 12,
+      color: colors.primary[500],
+    },
+    footer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: 12,
+    },
+    aiButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.neutral[100],
+      borderRadius: 12,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+    },
+    aiButtonText: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 12,
+      color: colors.primary[500],
+      marginLeft: 4,
+    },
+  });
+
   return (
     <GlassCard onPress={onPress}>
       <View style={styles.header}>
-        <Text style={styles.date}>{formatDisplayDate(entry.date)}</Text>
+        <ThemedText variant="secondary" style={styles.date}>
+          {formatDisplayDate(entry.date)}
+        </ThemedText>
         <MoodIcon mood={entry.mood} />
       </View>
 
@@ -108,85 +192,10 @@ export default function DiaryCard({ entry, onPress, onAnalyze }: DiaryCardProps)
         )}
 
         <TouchableOpacity style={styles.aiButton} onPress={onAnalyze}>
-          <Sparkles size={16} color="#8B5CF6" />
+          <Sparkles size={16} color={colors.primary[500]} />
           <Text style={styles.aiButtonText}>Analyze</Text>
         </TouchableOpacity>
       </View>
     </GlassCard>
   );
 }
-
-const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  date: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  title: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: '#111827',
-    marginBottom: 8,
-  },
-  content: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    color: '#4B5563',
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  contentContainer: {
-    marginBottom: 12,
-    maxHeight: 60, // Limit height for card preview
-    overflow: 'hidden',
-  },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-  },
-  tag: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginRight: 8,
-    marginBottom: 4,
-  },
-  tagText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  moreText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    color: '#8B5CF6',
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  aiButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  aiButtonText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    color: '#8B5CF6',
-    marginLeft: 4,
-  },
-});

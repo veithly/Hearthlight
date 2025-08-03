@@ -1,9 +1,7 @@
-import { useEffect } from 'react';
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import Toast from 'react-native-toast-message';
-import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -21,13 +19,25 @@ import {
   FiraCode_500Medium,
   FiraCode_600SemiBold
 } from '@expo-google-fonts/fira-code';
-import * as SplashScreen from 'expo-splash-screen';
+import { I18nProvider } from '@/lib/i18n';
+import { ThemeProvider } from '@/lib/theme';
+import { ClientRootLayout } from '@/components/ClientRootLayout';
 
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
-  useFrameworkReady();
+function RootLayoutContent() {
+  return (
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="+not-found" />
+      </Stack>
+      <Toast />
+    </>
+  );
+}
 
+export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     'Inter-Regular': Inter_400Regular,
     'Inter-Medium': Inter_500Medium,
@@ -42,24 +52,18 @@ export default function RootLayout() {
     'FiraCode-SemiBold': FiraCode_600SemiBold,
   });
 
-  useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, fontError]);
-
+  
   if (!fontsLoaded && !fontError) {
     return null;
   }
 
   return (
-    <>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-      <Toast />
-    </>
+    <ThemeProvider>
+      <I18nProvider>
+        <ClientRootLayout>
+          <RootLayoutContent />
+        </ClientRootLayout>
+      </I18nProvider>
+    </ThemeProvider>
   );
 }

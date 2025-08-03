@@ -1,0 +1,23 @@
+{
+  "title": "日记",
+  "new_entry": "新建条目",
+  "edit_entry": "编辑条目",
+  "delete_entry": "删除条目",
+  "save_entry": "保存条目",
+  "entry_title": "条目标题",
+  "entry_content": "条目内容",
+  "mood": "心情",
+  "weather": "天气",
+  "tags": "标签",
+  "date": "日期",
+  "time": "时间",
+  "location": "位置",
+  "photos": "照片",
+  "add_photo": "添加照片",
+  "no_entries": "暂无日记条目",
+  "create_first_entry": "创建您的第一个条目",
+  "search_entries": "搜索条目",
+  "filter_by_mood": "按心情筛选",
+  "filter_by_date": "按日期筛选",
+  "export_entries": "导出条目"
+}

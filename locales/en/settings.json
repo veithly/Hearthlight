@@ -1,0 +1,21 @@
+{
+  "language": "Language",
+  "theme": "Theme",
+  "notifications": "Notifications",
+  "privacy": "Privacy",
+  "account": "Account",
+  "general": "General",
+  "appearance": "Appearance",
+  "accessibility": "Accessibility",
+  "data": "Data & Storage",
+  "backup": "Backup",
+  "export": "Export",
+  "import": "Import",
+  "reset": "Reset",
+  "version": "Version",
+  "build": "Build",
+  "feedback": "Feedback",
+  "support": "Support",
+  "terms": "Terms of Service",
+  "privacy_policy": "Privacy Policy"
+}

@@ -18,8 +18,10 @@ import { StorageService } from '@/utils/storage';
 import { useModelStore } from '@/lib/stores/modelStore';
 import { toastService } from '@/utils/toastService';
 import { createAIService } from '@/utils/aiService';
-import { VercelAIAgentService } from '@/utils/vercelAIAgentService';
+import { AIAgentService } from '@/utils/vercelAIAgentService';
 import { collect_feedback_mcp_feedback_collector } from '@/utils/mcpTools';
+import { useTheme } from '@/lib/theme';
+import { useI18n } from '@/lib/i18n';
 
 // Define message types for UI display
 interface ChatMessage {
@@ -43,6 +45,7 @@ interface ToolResult {
 
 // Chat Bubble Component
 const ChatBubble: React.FC<{ message: ChatMessage }> = ({ message }) => {
+  const { colors } = useTheme();
   const getPhaseIcon = (phase?: string) => {
     switch (phase) {
       case 'reasoning': return '🤔';
@@ -55,11 +58,11 @@ const ChatBubble: React.FC<{ message: ChatMessage }> = ({ message }) => {
 
   const getPhaseColor = (phase?: string) => {
     switch (phase) {
-      case 'reasoning': return '#3B82F6';
-      case 'acting': return '#10B981';
-      case 'reflecting': return '#F59E0B';
-      case 'responding': return '#8B5CF6';
-      default: return '#6B7280';
+      case 'reasoning': return colors.primary[500];
+      case 'acting': return colors.semantic.success;
+      case 'reflecting': return colors.semantic.warning;
+      case 'responding': return colors.accent[500];
+      default: return colors.text.tertiary;
     }
   };
 
@@ -68,43 +71,43 @@ const ChatBubble: React.FC<{ message: ChatMessage }> = ({ message }) => {
     body: {
       fontSize: 16,
       lineHeight: 24,
-      color: message.role === 'user' ? '#FFFFFF' : '#374151',
+      color: message.role === 'user' ? colors.text.inverse : colors.text.primary,
       fontFamily: 'Inter-Regular',
     },
     heading1: {
       fontSize: 20,
       fontWeight: '600' as const,
-      color: message.role === 'user' ? '#FFFFFF' : '#111827',
+      color: message.role === 'user' ? colors.text.inverse : colors.text.primary,
       marginBottom: 8,
     },
     heading2: {
       fontSize: 18,
       fontWeight: '600' as const,
-      color: message.role === 'user' ? '#FFFFFF' : '#111827',
+      color: message.role === 'user' ? colors.text.inverse : colors.text.primary,
       marginBottom: 6,
     },
     heading3: {
       fontSize: 16,
       fontWeight: '600' as const,
-      color: message.role === 'user' ? '#FFFFFF' : '#111827',
+      color: message.role === 'user' ? colors.text.inverse : colors.text.primary,
       marginBottom: 4,
     },
     paragraph: {
       marginBottom: 8,
       fontSize: 16,
       lineHeight: 24,
-      color: message.role === 'user' ? '#FFFFFF' : '#374151',
+      color: message.role === 'user' ? colors.text.inverse : colors.text.secondary,
     },
     strong: {
       fontWeight: '600' as const,
-      color: message.role === 'user' ? '#FFFFFF' : '#111827',
+      color: message.role === 'user' ? colors.text.inverse : colors.text.primary,
     },
     em: {
       fontStyle: 'italic' as const,
     },
     code_inline: {
-      backgroundColor: message.role === 'user' ? 'rgba(255,255,255,0.2)' : '#F3F4F6',
-      color: message.role === 'user' ? '#FFFFFF' : '#EF4444',
+      backgroundColor: message.role === 'user' ? colors.glassmorphism.blur : colors.neutral[100],
+      color: message.role === 'user' ? colors.text.inverse : colors.semantic.error,
       paddingHorizontal: 4,
       paddingVertical: 2,
       borderRadius: 4,
@@ -112,20 +115,20 @@ const ChatBubble: React.FC<{ message: ChatMessage }> = ({ message }) => {
       fontFamily: 'monospace',
     },
     code_block: {
-      backgroundColor: message.role === 'user' ? 'rgba(255,255,255,0.1)' : '#F8FAFC',
+      backgroundColor: message.role === 'user' ? colors.glassmorphism.blur : colors.surface,
       padding: 12,
       borderRadius: 8,
       marginVertical: 8,
       borderLeftWidth: 3,
-      borderLeftColor: message.role === 'user' ? '#FFFFFF' : '#8B5CF6',
+      borderLeftColor: message.role === 'user' ? colors.text.inverse : colors.accent[500],
     },
     fence: {
-      backgroundColor: message.role === 'user' ? 'rgba(255,255,255,0.1)' : '#F8FAFC',
+      backgroundColor: message.role === 'user' ? colors.glassmorphism.blur : colors.neutral[50],
       padding: 12,
       borderRadius: 8,
       marginVertical: 8,
       borderLeftWidth: 3,
-      borderLeftColor: message.role === 'user' ? '#FFFFFF' : '#8B5CF6',
+      borderLeftColor: message.role === 'user' ? colors.text.inverse : colors.accent[500],
     },
     list_item: {
       marginBottom: 4,
@@ -137,11 +140,11 @@ const ChatBubble: React.FC<{ message: ChatMessage }> = ({ message }) => {
       marginBottom: 8,
     },
     blockquote: {
-      backgroundColor: message.role === 'user' ? 'rgba(255,255,255,0.1)' : '#F9FAFB',
+      backgroundColor: message.role === 'user' ? colors.glassmorphism.blur : colors.neutral[100],
       paddingLeft: 16,
       paddingVertical: 8,
       borderLeftWidth: 4,
-      borderLeftColor: message.role === 'user' ? '#FFFFFF' : '#D1D5DB',
+      borderLeftColor: message.role === 'user' ? colors.text.inverse : colors.neutral[200],
       marginVertical: 8,
     },
   };
@@ -157,9 +160,9 @@ const ChatBubble: React.FC<{ message: ChatMessage }> = ({ message }) => {
           message.role === 'user' ? styles.userAvatar : styles.aiAvatar
         ]}>
           {message.role === 'user' ? (
-            <User size={16} color="#FFFFFF" />
+            <User size={16} color={colors.text.inverse} />
           ) : (
-            <Bot size={16} color="#FFFFFF" />
+            <Bot size={16} color={colors.text.inverse} />
           )}
         </View>
 
@@ -274,6 +277,626 @@ const CollapsibleToolResults: React.FC<{
 };
 
 export default function AIAssistantScreen() {
+  const { colors } = useTheme();
+  const { t } = useI18n();
+
+  // Create styles inside component to access colors
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+    },
+    title: {
+      fontFamily: 'Poppins-Bold',
+      fontSize: 28,
+    },
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    headerButton: {
+      borderRadius: 12,
+      width: 40,
+      height: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: 8,
+    },
+    activeButton: {
+      backgroundColor: colors.primary[100],
+      borderWidth: 2,
+      borderColor: colors.primary[500],
+    },
+    emptyState: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 40,
+    },
+    emptyIconContainer: {
+      width: 120,
+      height: 120,
+      borderRadius: 60,
+      backgroundColor: colors.neutral[100],
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 24,
+    },
+    emptyTitle: {
+      fontFamily: 'Poppins-SemiBold',
+      fontSize: 24,
+      color: colors.text.primary,
+      marginBottom: 12,
+      textAlign: 'center',
+    },
+    emptyText: {
+      fontFamily: 'Inter-Regular',
+      fontSize: 16,
+      color: colors.text.secondary,
+      textAlign: 'center',
+      lineHeight: 24,
+      marginBottom: 32,
+    },
+    suggestionsContainer: {
+      width: '100%',
+    },
+    suggestionsTitle: {
+      fontFamily: 'Inter-SemiBold',
+      fontSize: 16,
+      color: colors.text.primary,
+      marginBottom: 16,
+      textAlign: 'center',
+    },
+    suggestionChip: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: colors.neutral[200],
+    },
+    suggestionText: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 14,
+      color: colors.primary[500],
+      textAlign: 'center',
+    },
+    messagesContainer: {
+      flex: 1,
+      paddingHorizontal: 20,
+    },
+    messageContainer: {
+      marginBottom: 16,
+    },
+    userMessage: {
+      alignItems: 'flex-end',
+    },
+    aiMessage: {
+      alignItems: 'flex-start',
+    },
+    messageHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    messageAvatar: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 8,
+    },
+    messageTime: {
+      fontFamily: 'Inter-Regular',
+      fontSize: 12,
+      color: colors.text.tertiary,
+    },
+    messageBubble: {
+      maxWidth: '80%',
+      borderRadius: 16,
+      padding: 16,
+    },
+    userBubble: {
+      backgroundColor: colors.accent[500],
+    },
+    aiBubble: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.neutral[200],
+    },
+    messageText: {
+      fontFamily: 'Inter-Regular',
+      fontSize: 16,
+      lineHeight: 24,
+    },
+    userText: {
+      color: colors.text.inverse,
+    },
+    aiText: {
+      color: colors.text.secondary,
+    },
+    loadingContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 16,
+    },
+    loadingText: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 14,
+      color: colors.text.tertiary,
+      marginLeft: 8,
+    },
+    inputContainer: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      backgroundColor: colors.surface,
+      borderTopWidth: 1,
+      borderTopColor: colors.neutral[200],
+    },
+    textInput: {
+      flex: 1,
+      backgroundColor: colors.neutral[50],
+      borderRadius: 20,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      fontFamily: 'Inter-Regular',
+      fontSize: 16,
+      color: colors.text.primary,
+      maxHeight: 100,
+      marginRight: 12,
+    },
+    sendButton: {
+      backgroundColor: colors.primary[500],
+      borderRadius: 20,
+      width: 40,
+      height: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    sendButtonDisabled: {
+      backgroundColor: colors.neutral[300],
+    },
+    modalContainer: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.neutral[200],
+      backgroundColor: colors.surface,
+    },
+    cancelButton: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 16,
+      color: colors.text.tertiary,
+    },
+    modalTitle: {
+      fontFamily: 'Poppins-SemiBold',
+      fontSize: 18,
+      color: colors.text.primary,
+    },
+    saveButton: {
+      fontFamily: 'Inter-SemiBold',
+      fontSize: 16,
+      color: colors.primary[500],
+    },
+    modalContent: {
+      flex: 1,
+      padding: 20,
+    },
+    sectionTitle: {
+      fontFamily: 'Poppins-SemiBold',
+      fontSize: 20,
+      color: colors.text.primary,
+      marginBottom: 16,
+    },
+    emptyProviders: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 32,
+      alignItems: 'center',
+    },
+    emptyProvidersText: {
+      fontFamily: 'Inter-Regular',
+      fontSize: 16,
+      color: colors.text.secondary,
+      textAlign: 'center',
+    },
+    providerCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 12,
+      shadowColor: colors.text.inverse,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    providerHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    providerName: {
+      fontFamily: 'Inter-SemiBold',
+      fontSize: 16,
+      color: colors.text.primary,
+    },
+    providerDetails: {
+      fontFamily: 'Inter-Regular',
+      fontSize: 12,
+      color: colors.text.tertiary,
+      marginTop: 2,
+    },
+    providerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    providerButton: {
+      backgroundColor: colors.neutral[100],
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      marginRight: 8,
+    },
+    activeButtonSelected: {
+      backgroundColor: colors.primary[500],
+    },
+    activeButtonText: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 12,
+      color: colors.text.tertiary,
+    },
+    activeButtonTextSelected: {
+      color: colors.text.inverse,
+    },
+    deleteButton: {
+      padding: 8,
+    },
+    inputGroup: {
+      marginBottom: 20,
+    },
+    inputLabel: {
+      fontFamily: 'Inter-SemiBold',
+      fontSize: 14,
+      color: colors.text.primary,
+      marginBottom: 8,
+    },
+    input: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 16,
+      fontFamily: 'Inter-Regular',
+      fontSize: 16,
+      color: colors.text.primary,
+      borderWidth: 1,
+      borderColor: colors.neutral[200],
+    },
+    typeSelector: {
+      flexDirection: 'row',
+      backgroundColor: colors.neutral[100],
+      borderRadius: 12,
+      padding: 4,
+    },
+    typeOption: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    selectedType: {
+      backgroundColor: colors.surface,
+      shadowColor: colors.text.inverse,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    typeText: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 14,
+      color: colors.text.tertiary,
+    },
+    selectedTypeText: {
+      color: colors.text.primary,
+    },
+    modelHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    fetchModelsButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.neutral[100],
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+    fetchModelsText: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 12,
+      color: colors.primary[500],
+      marginLeft: 4,
+    },
+    modelsContainer: {
+      flexDirection: 'row',
+    },
+    modelOption: {
+      backgroundColor: colors.neutral[100],
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      marginRight: 8,
+    },
+    selectedModel: {
+      backgroundColor: colors.primary[500],
+    },
+    modelText: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 12,
+      color: colors.text.tertiary,
+    },
+    selectedModelText: {
+      color: colors.text.inverse,
+    },
+    errorContainer: {
+      backgroundColor: colors.semantic.error + '10',
+      borderRadius: 12,
+      padding: 16,
+      marginHorizontal: 20,
+      marginVertical: 8,
+      borderWidth: 1,
+      borderColor: colors.semantic.error + '30',
+    },
+    errorText: {
+      fontFamily: 'Inter-Regular',
+      fontSize: 14,
+      color: colors.semantic.error,
+      marginBottom: 12,
+    },
+    retryButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.neutral[100],
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      alignSelf: 'flex-start',
+    },
+    retryButtonText: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 14,
+      color: colors.primary[500],
+      marginLeft: 4,
+    },
+    conversationItem: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 12,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    activeConversationItem: {
+      borderColor: colors.primary[500],
+      borderWidth: 2,
+    },
+    conversationDetails: {
+      flex: 1,
+    },
+    conversationName: {
+      fontFamily: 'Inter-SemiBold',
+      fontSize: 16,
+      color: colors.text.primary,
+    },
+    conversationLastMessage: {
+      fontFamily: 'Inter-Regular',
+      fontSize: 14,
+      color: colors.text.tertiary,
+      marginTop: 4,
+    },
+    deleteConversationButton: {
+      padding: 8,
+    },
+    editButton: {
+      padding: 8,
+    },
+    toolMessage: {
+      alignItems: 'flex-start',
+    },
+    toolAvatar: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: colors.text.tertiary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 8,
+    },
+    toolAvatarText: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 14,
+      color: colors.text.inverse,
+    },
+    toolBubble: {
+      backgroundColor: colors.neutral[100],
+      borderColor: colors.neutral[200],
+      borderWidth: 1,
+    },
+    toolText: {
+      color: colors.text.secondary,
+      fontFamily: 'monospace',
+    },
+    toolCallContainer: {
+      marginTop: 12,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: colors.neutral[200],
+    },
+    toolCall: {
+      marginBottom: 8,
+    },
+    toolCallTitle: {
+      fontFamily: 'Inter-Bold',
+      fontSize: 14,
+      color: colors.text.secondary,
+      marginBottom: 4,
+    },
+    toolCallArgs: {
+      fontFamily: 'monospace',
+      fontSize: 12,
+      color: colors.text.tertiary,
+      marginBottom: 4,
+      backgroundColor: colors.neutral[100],
+      padding: 4,
+      borderRadius: 4,
+    },
+    toolCallResult: {
+      fontFamily: 'Inter-Regular',
+      fontSize: 14,
+      color: colors.text.secondary,
+      backgroundColor: colors.neutral[100],
+      padding: 8,
+      borderRadius: 8,
+    },
+    userAvatar: {
+      backgroundColor: colors.primary[500],
+    },
+    aiAvatar: {
+      backgroundColor: colors.neutral[500],
+    },
+    // Phase indicator styles
+    phaseIndicator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+      marginLeft: 8,
+    },
+    phaseIcon: {
+      fontSize: 12,
+      marginRight: 4,
+    },
+    phaseText: {
+      fontSize: 11,
+      color: colors.text.inverse,
+      fontWeight: '600',
+    },
+    // Streaming cursor
+    streamingCursor: {
+      color: colors.primary[500],
+      fontWeight: 'bold',
+      fontSize: 16,
+    },
+    // Markdown container
+    markdownContainer: {
+      flex: 1,
+    },
+    // Tool results styles
+    toolResultsContainer: {
+      marginTop: 12,
+      backgroundColor: colors.neutral[50],
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.neutral[200],
+      overflow: 'hidden',
+    },
+    toolResultsHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 12,
+      backgroundColor: colors.neutral[100],
+    },
+    toolResultsHeaderLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    toolResultsIcon: {
+      fontSize: 12,
+      color: colors.text.tertiary,
+      marginRight: 8,
+    },
+    toolResultsTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text.primary,
+    },
+    toolResultsPhase: {
+      fontSize: 12,
+      color: colors.primary[500],
+      backgroundColor: colors.primary[100],
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 4,
+      fontWeight: '500',
+    },
+    toolResultsContent: {
+      padding: 12,
+    },
+    toolResultItem: {
+      backgroundColor: colors.surface,
+      borderRadius: 6,
+      padding: 12,
+      marginBottom: 8,
+      borderLeftWidth: 3,
+      borderLeftColor: colors.primary[500],
+    },
+    toolResultName: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text.primary,
+      marginBottom: 8,
+    },
+    toolResultSection: {
+      marginBottom: 8,
+    },
+    toolResultLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.text.tertiary,
+      marginBottom: 4,
+    },
+    toolResultCode: {
+      fontSize: 11,
+      fontFamily: 'monospace',
+      color: colors.text.secondary,
+      backgroundColor: colors.neutral[50],
+      padding: 8,
+      borderRadius: 4,
+      borderWidth: 1,
+      borderColor: colors.neutral[200],
+    },
+    toolResultValue: {
+      fontSize: 12,
+      color: colors.semantic.success,
+      backgroundColor: colors.semantic.success + '10',
+      padding: 8,
+      borderRadius: 4,
+      borderWidth: 1,
+      borderColor: colors.semantic.success + '30',
+    },
+  });
   const [showSettings, setShowSettings] = useState(false);
   const [showProviderModal, setShowProviderModal] = useState(false);
   const [editingProvider, setEditingProvider] = useState<AIProvider | null>(null);
@@ -316,7 +939,7 @@ export default function AIAssistantScreen() {
 
   const initializeAIService = useCallback(async () => {
     try {
-      const service = new VercelAIAgentService(selectedModel!);
+      const service = new AIAgentService(selectedModel!);
 
       // Check AI conversation settings
       const settings = await StorageService.getSettings();
@@ -344,7 +967,7 @@ export default function AIAssistantScreen() {
     }
   }, [selectedModel, addConversation, setActiveConversationId, initializeAIService]);
 
-  const loadConversationHistory = async (service: VercelAIAgentService, threadId: string) => {
+  const loadConversationHistory = async (service: AIAgentService, threadId: string) => {
     try {
       const history = await service.getConversationHistory(threadId);
       const chatMessages = history.map((msg, index) => ({
@@ -755,37 +1378,39 @@ Please test the AI assistant and provide feedback on:
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>AI Assistant</Text>
+        <Text style={[styles.title, { color: colors.text.primary }]}>{t('ai.title')}</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity
-            style={styles.headerButton}
+            style={[styles.headerButton, { backgroundColor: colors.surface }]}
             onPress={collectUserFeedback}
           >
-            <MessageSquare size={20} color="#6B7280" />
+            <MessageSquare size={20} color={colors.text.tertiary} />
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.headerButton}
+            style={[styles.headerButton, { backgroundColor: colors.surface }]}
             onPress={() => setShowConversations(true)}
           >
-            <RefreshCw size={20} color="#6B7280" />
+            <RefreshCw size={20} color={colors.text.tertiary} />
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.headerButton}
+            style={[styles.headerButton, { backgroundColor: colors.surface }]}
             onPress={() => setShowSettings(true)}
           >
-            <Settings size={20} color="#6B7280" />
+            <Settings size={20} color={colors.text.tertiary} />
           </TouchableOpacity>
         </View>
       </View>
 
       {messages.length === 0 ? (
         <View style={styles.emptyState}>
-          <View style={styles.emptyIconContainer}>
-            <Brain size={64} color="#8B5CF6" />
+          <View style={[styles.emptyIconContainer, { backgroundColor: colors.surface }]}>
+            <Brain size={64} color={colors.primary[500]} />
           </View>
-          <Text style={styles.emptyTitle}>Welcome to AI Assistant</Text>
+          <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>
+            {t('ai.title')}
+          </Text>
           <Text style={styles.emptyText}>
             I can help you with productivity tasks like creating tasks, writing diary entries, setting goals, analyzing your progress, and planning your day. Just ask me naturally!
           </Text>
@@ -825,7 +1450,7 @@ Please test the AI assistant and provide feedback on:
 
           {isLoading && (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color="#8B5CF6" />
+              <ActivityIndicator size="small" color={colors.accent[500]} />
               <Text style={styles.loadingText}>
                 AI is thinking...
               </Text>
@@ -841,7 +1466,7 @@ Please test the AI assistant and provide feedback on:
                 style={styles.retryButton}
                 onPress={retryLastMessage}
               >
-                <RefreshCw size={16} color="#8B5CF6" />
+                <RefreshCw size={16} color={colors.accent[500]} />
                 <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>
             </View>
@@ -857,7 +1482,7 @@ Please test the AI assistant and provide feedback on:
           onChangeText={handleTextChange}
           multiline
           maxLength={1000}
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={colors.text.tertiary}
           onSubmitEditing={handleSend}
         />
         <TouchableOpacity
@@ -865,7 +1490,7 @@ Please test the AI assistant and provide feedback on:
           onPress={handleSend}
           disabled={!input.trim() || isLoading}
         >
-          <Send size={20} color="#FFFFFF" />
+          <Send size={20} color={colors.text.inverse} />
         </TouchableOpacity>
       </View>
 
@@ -883,7 +1508,7 @@ Please test the AI assistant and provide feedback on:
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Conversations</Text>
             <TouchableOpacity onPress={handleNewConversation}>
-              <Plus size={24} color="#8B5CF6" />
+              <Plus size={24} color={colors.accent[500]} />
             </TouchableOpacity>
           </View>
           <ScrollView style={styles.modalContent}>
@@ -907,7 +1532,7 @@ Please test the AI assistant and provide feedback on:
                   style={styles.deleteConversationButton}
                   onPress={() => handleDeleteConversation(convo.id)}
                 >
-                  <Trash2 size={16} color="#EF4444" />
+                  <Trash2 size={16} color={colors.semantic.error} />
                 </TouchableOpacity>
               </TouchableOpacity>
             ))}
@@ -931,7 +1556,7 @@ Please test the AI assistant and provide feedback on:
               setEditingProvider(null);
               setShowProviderModal(true);
             }}>
-              <Plus size={24} color="#8B5CF6" />
+              <Plus size={24} color={colors.accent[500]} />
             </TouchableOpacity>
           </View>
 
@@ -980,13 +1605,13 @@ Please test the AI assistant and provide feedback on:
                           setShowProviderModal(true);
                         }}
                       >
-                        <Edit size={16} color="#6B7280" />
+                        <Edit size={16} color={colors.text.tertiary} />
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.deleteButton}
                         onPress={() => removeProvider(provider.id)}
                       >
-                        <Trash2 size={16} color="#EF4444" />
+                        <Trash2 size={16} color={colors.semantic.error} />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -1025,7 +1650,7 @@ Please test the AI assistant and provide feedback on:
                 placeholder="My OpenAI Provider"
                 value={newProvider.name}
                 onChangeText={(text) => setNewProvider({ ...newProvider, name: text })}
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.text.tertiary}
               />
             </View>
 
@@ -1067,7 +1692,7 @@ Please test the AI assistant and provide feedback on:
                 value={newProvider.apiKey}
                 onChangeText={(text) => setNewProvider({ ...newProvider, apiKey: text })}
                 secureTextEntry
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.text.tertiary}
               />
             </View>
 
@@ -1078,7 +1703,7 @@ Please test the AI assistant and provide feedback on:
                 placeholder={getDefaultBaseUrl(newProvider.type)}
                 value={newProvider.baseUrl}
                 onChangeText={(text) => setNewProvider({ ...newProvider, baseUrl: text })}
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.text.tertiary}
               />
             </View>
 
@@ -1091,9 +1716,9 @@ Please test the AI assistant and provide feedback on:
                   disabled={!newProvider.apiKey || isLoadingModels}
                 >
                   {isLoadingModels ? (
-                    <ActivityIndicator size="small" color="#8B5CF6" />
+                    <ActivityIndicator size="small" color={colors.accent[500]} />
                   ) : (
-                    <RefreshCw size={16} color="#8B5CF6" />
+                    <RefreshCw size={16} color={colors.accent[500]} />
                   )}
                   <Text style={styles.fetchModelsText}>Fetch Models</Text>
                 </TouchableOpacity>
@@ -1127,7 +1752,7 @@ Please test the AI assistant and provide feedback on:
                   placeholder="gpt-4, gemini-pro, claude-3-opus"
                   value={newProvider.model}
                   onChangeText={(text) => setNewProvider({ ...newProvider, model: text })}
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={colors.text.tertiary}
                 />
               )}
             </View>
@@ -1138,624 +1763,3 @@ Please test the AI assistant and provide feedback on:
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  title: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 28,
-    color: '#111827',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerButton: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 8,
-  },
-  activeButton: {
-    backgroundColor: '#EDE9FE',
-    borderWidth: 2,
-    borderColor: '#8B5CF6',
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyIconContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  emptyTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 24,
-    color: '#111827',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  emptyText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 32,
-  },
-  suggestionsContainer: {
-    width: '100%',
-  },
-  suggestionsTitle: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
-    color: '#374151',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  suggestionChip: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  suggestionText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 14,
-    color: '#8B5CF6',
-    textAlign: 'center',
-  },
-  messagesContainer: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  messageContainer: {
-    marginBottom: 16,
-  },
-  userMessage: {
-    alignItems: 'flex-end',
-  },
-  aiMessage: {
-    alignItems: 'flex-start',
-  },
-  messageHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  messageAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  messageTime: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 12,
-    color: '#9CA3AF',
-  },
-  messageBubble: {
-    maxWidth: '80%',
-    borderRadius: 16,
-    padding: 16,
-  },
-  userBubble: {
-    backgroundColor: '#8B5CF6',
-  },
-  aiBubble: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  messageText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  userText: {
-    color: '#FFFFFF',
-  },
-  aiText: {
-    color: '#374151',
-  },
-
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-  },
-  loadingText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 14,
-    color: '#6B7280',
-    marginLeft: 8,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  textInput: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontFamily: 'Inter-Regular',
-    fontSize: 16,
-    color: '#111827',
-    maxHeight: 100,
-    marginRight: 12,
-  },
-  sendButton: {
-    backgroundColor: '#8B5CF6',
-    borderRadius: 20,
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sendButtonDisabled: {
-    backgroundColor: '#D1D5DB',
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-  },
-  cancelButton: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  modalTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: '#111827',
-  },
-  saveButton: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
-    color: '#8B5CF6',
-  },
-  modalContent: {
-    flex: 1,
-    padding: 20,
-  },
-  sectionTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 20,
-    color: '#111827',
-    marginBottom: 16,
-  },
-  emptyProviders: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 32,
-    alignItems: 'center',
-  },
-  emptyProvidersText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center',
-  },
-  providerCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  providerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  providerName: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
-    color: '#111827',
-  },
-  providerDetails: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  providerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  providerButton: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginRight: 8,
-  },
-  activeButtonSelected: {
-    backgroundColor: '#8B5CF6',
-  },
-  activeButtonText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  activeButtonTextSelected: {
-    color: '#FFFFFF',
-  },
-  deleteButton: {
-    padding: 8,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 14,
-    color: '#374151',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    fontFamily: 'Inter-Regular',
-    fontSize: 16,
-    color: '#111827',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  typeSelector: {
-    flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    padding: 4,
-  },
-  typeOption: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  selectedType: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  typeText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  selectedTypeText: {
-    color: '#111827',
-  },
-  modelHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  fetchModelsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  fetchModelsText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    color: '#8B5CF6',
-    marginLeft: 4,
-  },
-  modelsContainer: {
-    flexDirection: 'row',
-  },
-  modelOption: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginRight: 8,
-  },
-  selectedModel: {
-    backgroundColor: '#8B5CF6',
-  },
-  modelText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  selectedModelText: {
-    color: '#FFFFFF',
-  },
-  errorContainer: {
-    backgroundColor: '#FEF2F2',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 20,
-    marginVertical: 8,
-    borderWidth: 1,
-    borderColor: '#FECACA',
-  },
-  errorText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    color: '#DC2626',
-    marginBottom: 12,
-  },
-  retryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    alignSelf: 'flex-start',
-  },
-  retryButtonText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 14,
-    color: '#8B5CF6',
-    marginLeft: 4,
-  },
-  conversationItem: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  activeConversationItem: {
-    borderColor: '#8B5CF6',
-    borderWidth: 2,
-  },
-  conversationDetails: {
-    flex: 1,
-  },
-  conversationName: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
-    color: '#111827',
-  },
-  conversationLastMessage: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 4,
-  },
-  deleteConversationButton: {
-    padding: 8,
-  },
-  editButton: {
-    padding: 8,
-  },
-  toolMessage: {
-    alignItems: 'flex-start',
-  },
-  toolAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#6B7280',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  toolAvatarText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 14,
-    color: '#FFFFFF',
-  },
-  toolBubble: {
-    backgroundColor: '#F3F4F6',
-    borderColor: '#E5E7EB',
-    borderWidth: 1,
-  },
-  toolText: {
-    color: '#4B5563',
-    fontFamily: 'monospace',
-  },
-  toolCallContainer: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  toolCall: {
-    marginBottom: 8,
-  },
-  toolCallTitle: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 14,
-    color: '#374151',
-    marginBottom: 4,
-  },
-  toolCallArgs: {
-    fontFamily: 'monospace',
-    fontSize: 12,
-    color: '#6B7280',
-    marginBottom: 4,
-    backgroundColor: '#F9FAFB',
-    padding: 4,
-    borderRadius: 4,
-  },
-  toolCallResult: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    color: '#374151',
-    backgroundColor: '#F3F4F6',
-    padding: 8,
-    borderRadius: 8,
-  },
-  userAvatar: {
-    backgroundColor: '#8B5CF6',
-  },
-  aiAvatar: {
-    backgroundColor: '#6B7280',
-  },
-  // Phase indicator styles
-  phaseIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginLeft: 8,
-  },
-  phaseIcon: {
-    fontSize: 12,
-    marginRight: 4,
-  },
-  phaseText: {
-    fontSize: 11,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  // Streaming cursor
-  streamingCursor: {
-    color: '#8B5CF6',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  // Markdown container
-  markdownContainer: {
-    flex: 1,
-  },
-  // Tool results styles
-  toolResultsContainer: {
-    marginTop: 12,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    overflow: 'hidden',
-  },
-  toolResultsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 12,
-    backgroundColor: '#F1F5F9',
-  },
-  toolResultsHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  toolResultsIcon: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginRight: 8,
-  },
-  toolResultsTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-  },
-  toolResultsPhase: {
-    fontSize: 12,
-    color: '#8B5CF6',
-    backgroundColor: '#EDE9FE',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    fontWeight: '500',
-  },
-  toolResultsContent: {
-    padding: 12,
-  },
-  toolResultItem: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 6,
-    padding: 12,
-    marginBottom: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: '#8B5CF6',
-  },
-  toolResultName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 8,
-  },
-  toolResultSection: {
-    marginBottom: 8,
-  },
-  toolResultLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6B7280',
-    marginBottom: 4,
-  },
-  toolResultCode: {
-    fontSize: 11,
-    fontFamily: 'monospace',
-    color: '#374151',
-    backgroundColor: '#F8FAFC',
-    padding: 8,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  toolResultValue: {
-    fontSize: 12,
-    color: '#166534',
-    backgroundColor: '#F0FDF4',
-    padding: 8,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
-  },
-
-});

@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect } from 'react';
 
 declare global {
@@ -8,6 +10,8 @@ declare global {
 
 export function useFrameworkReady() {
   useEffect(() => {
-    window.frameworkReady?.();
-  });
+    if (typeof window !== 'undefined') {
+      window.frameworkReady?.();
+    }
+  }, []);
 }

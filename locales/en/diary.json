@@ -1,0 +1,23 @@
+{
+  "title": "Diary",
+  "new_entry": "New Entry",
+  "edit_entry": "Edit Entry",
+  "delete_entry": "Delete Entry",
+  "save_entry": "Save Entry",
+  "entry_title": "Entry Title",
+  "entry_content": "Entry Content",
+  "mood": "Mood",
+  "weather": "Weather",
+  "tags": "Tags",
+  "date": "Date",
+  "time": "Time",
+  "location": "Location",
+  "photos": "Photos",
+  "add_photo": "Add Photo",
+  "no_entries": "No diary entries yet",
+  "create_first_entry": "Create your first entry",
+  "search_entries": "Search entries",
+  "filter_by_mood": "Filter by mood",
+  "filter_by_date": "Filter by date",
+  "export_entries": "Export entries"
+}

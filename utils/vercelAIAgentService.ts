@@ -1,14 +1,9 @@
 /**
- * Vercel AI SDK Agent Service
+ * AI Agent Service
  *
- * This service uses Vercel AI SDK to replicate LangGraph functionality
- * with proper tool calling and conversation management for React Native.
+ * This service provides AI functionality with proper tool calling and conversation management.
+ * Uses direct API calls to avoid bundling issues with Vercel AI SDK.
  */
-
-import { generateText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
-import { createAnthropic } from '@ai-sdk/anthropic';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { AIProvider, Task, DiaryEntry, Goal } from '@/types';
 import { StorageService } from '@/utils/storage';
 import { activityTracker } from '@/utils/activityTracker';
@@ -233,9 +228,8 @@ const executeGetUserActivities = async (args: any) => {
     return `Recent user activities: ${JSON.stringify({
       activities: activities.slice(0, limit),
       stats,
-      summary: `Found ${activities.length} activities. Most active in: ${
-        Object.entries(stats).reduce((a, b) => stats[a[0]] > stats[b[0]] ? a : b)[0]
-      }`
+      summary: `Found ${activities.length} activities. Most active in: ${Object.entries(stats).reduce((a, b) => stats[a[0]] > stats[b[0]] ? a : b)[0]
+        }`
     }, null, 2)}`;
   } catch (error) {
     return `Failed to get user activities: ${error instanceof Error ? error.message : 'Unknown error'}`;
@@ -344,7 +338,7 @@ const executeGetDiaryInsights = async (args: any) => {
       totalEntries: recentEntries.length,
       averageWordsPerEntry: recentEntries.length > 0 ? Math.round(totalWords / recentEntries.length) : 0,
       moodDistribution: moodCounts,
-      commonTags: Object.entries(tagCounts).sort(([,a], [,b]) => b - a).slice(0, 5),
+      commonTags: Object.entries(tagCounts).sort(([, a], [, b]) => b - a).slice(0, 5),
       writingFrequency: recentEntries.length / (period === 'day' ? 1 : period === 'week' ? 7 : 30),
       insights: []
     };
@@ -488,7 +482,7 @@ My response will be supportive, specific, and actionable.`;
   }
 }
 
-export class VercelAIAgentService {
+export class AIAgentService {
   private provider: AIProvider;
   private conversationStates: Map<string, ConversationState> = new Map();
 
@@ -496,28 +490,98 @@ export class VercelAIAgentService {
     this.provider = provider;
   }
 
-  private getModel() {
+  private async callAI(messages: any[]): Promise<string> {
     switch (this.provider.type) {
       case 'openai':
       case 'custom':
-        const openai = createOpenAI({
-          apiKey: this.provider.apiKey,
-          baseURL: this.provider.baseUrl,
-        });
-        return openai(this.provider.model as any);
+        return this.callOpenAI(messages);
       case 'claude':
-        const anthropic = createAnthropic({
-          apiKey: this.provider.apiKey,
-        });
-        return anthropic(this.provider.model as any);
+        return this.callClaude(messages);
       case 'gemini':
-        const google = createGoogleGenerativeAI({
-          apiKey: this.provider.apiKey,
-        });
-        return google(this.provider.model as any);
+        return this.callGemini(messages);
       default:
         throw new Error(`Unsupported provider type: ${this.provider.type}`);
     }
+  }
+
+  private async callOpenAI(messages: any[]): Promise<string> {
+    const response = await fetch(`${this.provider.baseUrl || 'https://api.openai.com/v1'}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.provider.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: this.provider.model,
+        messages,
+        temperature: 0.7,
+        max_tokens: 1000,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0]?.message?.content || 'No response from AI';
+  }
+
+  private async callClaude(messages: any[]): Promise<string> {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.provider.apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: this.provider.model,
+        max_tokens: 1000,
+        messages: messages.map((msg, index) => ({
+          role: msg.role === 'system' ? 'user' : msg.role,
+          content: msg.content,
+        })),
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Claude API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.content[0]?.text || 'No response from AI';
+  }
+
+  private async callGemini(messages: any[]): Promise<string> {
+    // Convert messages to Gemini format
+    const contents = messages
+      .filter(msg => msg.role !== 'system')
+      .map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.content }],
+      }));
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${this.provider.model}:generateContent?key=${this.provider.apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents,
+        generationConfig: {
+          maxOutputTokens: 1000,
+          temperature: 0.7,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.candidates[0]?.content?.parts[0]?.text || 'No response from AI';
   }
 
   private getSystemPrompt(): string {
@@ -622,7 +686,6 @@ Example coaching interaction:
 
   // Enhanced ReAct agent execution with structured reasoning
   private async executeAgentStep(message: string, conversationHistory: AgentMessage[]): Promise<{ response: string; toolCalls: ToolCall[] }> {
-    const model = this.getModel();
     const systemPrompt = this.getSystemPrompt();
 
     // Enhanced ReAct prompt for better reasoning
@@ -648,10 +711,7 @@ Start your response by briefly explaining your reasoning, then proceed with your
     ];
 
     try {
-      const { text } = await generateText({
-        model,
-        messages,
-      });
+      const text = await this.callAI(messages);
 
       // Parse function calls from the response
       const toolCalls: ToolCall[] = [];

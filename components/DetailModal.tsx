@@ -19,6 +19,8 @@ import {
 import MarkdownDisplay from 'react-native-markdown-display';
 import MarkdownEditor from './MarkdownEditor';
 
+import { useTheme } from '@/lib/theme';
+
 export interface DetailField {
   key: string;
   label: string;
@@ -58,6 +60,7 @@ export default function DetailModal({
   showEditButton = true,
   showDeleteButton = true,
 }: DetailModalProps) {
+  const { colors } = useTheme();
   const [isEditing, setIsEditing] = useState(initialEditing);
   const [editedData, setEditedData] = useState(data);
   const [isSaving, setIsSaving] = useState(false);
@@ -136,7 +139,7 @@ export default function DetailModal({
                 onChangeText={(text) => updateField(field.key, field.type === 'number' ? Number(text) : text)}
                 placeholder={field.placeholder}
                 keyboardType={field.type === 'number' ? 'numeric' : 'default'}
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.text.tertiary}
               />
             ) : (
               <Text style={styles.fieldValue}>{value?.toString() || 'Not set'}</Text>
@@ -156,7 +159,7 @@ export default function DetailModal({
                 placeholder={field.placeholder}
                 multiline
                 textAlignVertical="top"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.text.tertiary}
               />
             ) : (
               <Text style={styles.fieldValue}>{value?.toString() || 'Not set'}</Text>
@@ -208,8 +211,8 @@ export default function DetailModal({
               value={Boolean(value)}
               onValueChange={(newValue) => updateField(field.key, newValue)}
               disabled={!isFieldEditable}
-              trackColor={{ false: '#E5E7EB', true: '#8B5CF6' }}
-              thumbColor={value ? '#FFFFFF' : '#F3F4F6'}
+              trackColor={{ false: colors.neutral[200], true: colors.primary[500] }}
+              thumbColor={value ? colors.text.inverse : colors.text.primary}
             />
           </View>
         );
@@ -219,7 +222,7 @@ export default function DetailModal({
           <View key={field.key} style={styles.fieldContainer}>
             <Text style={styles.fieldLabel}>{field.label}</Text>
             <View style={styles.dateContainer}>
-              <Calendar size={16} color="#8B5CF6" />
+              <Calendar size={16} color={colors.primary[500]} />
               <Text style={styles.dateText}>
                 {value ? new Date(value).toLocaleDateString() : 'Not set'}
               </Text>
@@ -235,7 +238,7 @@ export default function DetailModal({
               {Array.isArray(value) && value.length > 0 ? (
                 value.map((tag, index) => (
                   <View key={index} style={styles.tag}>
-                    <Tag size={12} color="#8B5CF6" />
+                    <Tag size={12} color={colors.primary[500]} />
                     <Text style={styles.tagText}>{tag}</Text>
                   </View>
                 ))
@@ -289,7 +292,7 @@ export default function DetailModal({
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <X size={24} color="#6B7280" />
+            <X size={24} color={colors.text.tertiary} />
           </TouchableOpacity>
 
           <Text style={styles.title}>{title}</Text>
@@ -302,9 +305,9 @@ export default function DetailModal({
                 style={styles.actionButton}
               >
                 {isSaving ? (
-                  <ActivityIndicator size="small" color="#8B5CF6" />
+                  <ActivityIndicator size="small" color={colors.primary[500]} />
                 ) : (
-                  <Save size={20} color="#8B5CF6" />
+                  <Save size={20} color={colors.primary[500]} />
                 )}
               </TouchableOpacity>
             ) : (
@@ -314,7 +317,7 @@ export default function DetailModal({
                     onPress={() => setIsEditing(true)}
                     style={styles.actionButton}
                   >
-                    <Edit3 size={20} color="#8B5CF6" />
+                    <Edit3 size={20} color={colors.primary[500]} />
                   </TouchableOpacity>
                 )}
                 {showDeleteButton && onDelete && (
@@ -322,7 +325,7 @@ export default function DetailModal({
                     onPress={handleDelete}
                     style={styles.actionButton}
                   >
-                    <Trash2 size={20} color="#EF4444" />
+                    <Trash2 size={20} color={colors.semantic.error} />
                   </TouchableOpacity>
                 )}
               </>
@@ -332,7 +335,7 @@ export default function DetailModal({
 
         {isLoading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#8B5CF6" />
+            <ActivityIndicator size="large" color={colors.primary[500]} />
             <Text style={styles.loadingText}>Loading...</Text>
           </View>
         ) : (
@@ -343,12 +346,10 @@ export default function DetailModal({
       </SafeAreaView>
     </Modal>
   );
-}
 
-const styles = StyleSheet.create({
+  const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   header: {
     flexDirection: 'row',
@@ -357,8 +358,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
   },
   closeButton: {
     padding: 8,
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 18,
-    color: '#111827',
+    color: colors.text.primary,
     flex: 1,
     textAlign: 'center',
   },
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
   loadingText: {
     fontFamily: 'Inter-Medium',
     fontSize: 16,
-    color: '#6B7280',
+    color: colors.text.tertiary,
     marginTop: 12,
   },
   content: {
@@ -399,26 +399,26 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontFamily: 'Inter-SemiBold',
     fontSize: 14,
-    color: '#374151',
+    color: colors.text.secondary,
     marginBottom: 8,
   },
   fieldValue: {
     fontFamily: 'Inter-Regular',
     fontSize: 16,
-    color: '#111827',
-    backgroundColor: '#F3F4F6',
+    color: colors.text.primary,
+    backgroundColor: colors.neutral[100],
     borderRadius: 12,
     padding: 16,
   },
   textInput: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     fontFamily: 'Inter-Regular',
     fontSize: 16,
-    color: '#111827',
+    color: colors.text.primary,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.neutral[200],
   },
   textArea: {
     minHeight: 100,
@@ -428,14 +428,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
   },
   selectContainer: {
     flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.neutral[100],
     borderRadius: 12,
     padding: 4,
   },
@@ -446,8 +446,8 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   selectedOption: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
+    backgroundColor: colors.surface,
+    shadowColor: colors.text.primary,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -456,22 +456,22 @@ const styles = StyleSheet.create({
   selectOptionText: {
     fontFamily: 'Inter-Medium',
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.text.tertiary,
   },
   selectedOptionText: {
-    color: '#111827',
+    color: colors.text.primary,
   },
   dateContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.neutral[100],
     borderRadius: 12,
     padding: 16,
   },
   dateText: {
     fontFamily: 'Inter-Medium',
     fontSize: 16,
-    color: '#111827',
+    color: colors.text.primary,
     marginLeft: 12,
   },
   tagsContainer: {
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
   tag: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.neutral[100],
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -491,17 +491,17 @@ const styles = StyleSheet.create({
   tagText: {
     fontFamily: 'Inter-Medium',
     fontSize: 12,
-    color: '#8B5CF6',
+    color: colors.primary[500],
     marginLeft: 4,
   },
   markdownEditor: {
     minHeight: 200,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.neutral[50],
     borderRadius: 12,
     marginTop: 8,
   },
   markdownPreview: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.neutral[50],
     borderRadius: 12,
     padding: 16,
     marginTop: 8,
@@ -513,37 +513,37 @@ const markdownStyles = StyleSheet.create({
   body: {
     fontFamily: 'Inter-Regular',
     fontSize: 16,
-    color: '#111827',
+    color: colors.text.primary,
     lineHeight: 24,
   },
   heading1: {
     fontFamily: 'Poppins-Bold',
     fontSize: 24,
-    color: '#111827',
+    color: colors.text.primary,
     marginBottom: 16,
   },
   heading2: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 20,
-    color: '#111827',
+    color: colors.text.primary,
     marginBottom: 12,
   },
   heading3: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 18,
-    color: '#111827',
+    color: colors.text.primary,
     marginBottom: 8,
   },
   code_inline: {
     fontFamily: 'FiraCode-Regular',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.neutral[100],
     paddingHorizontal: 4,
     paddingVertical: 2,
     borderRadius: 4,
   },
   code_block: {
     fontFamily: 'FiraCode-Regular',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.neutral[100],
     padding: 12,
     borderRadius: 8,
     marginVertical: 8,
@@ -552,3 +552,4 @@ const markdownStyles = StyleSheet.create({
     marginBottom: 8,
   },
 });
+}

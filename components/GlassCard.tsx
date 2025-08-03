@@ -1,6 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, View, StyleSheet, ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { useTheme } from '@/lib/theme';
 
 interface GlassCardProps {
   children: React.ReactNode;
@@ -25,14 +26,15 @@ export default function GlassCard({
   margin = 8,
   disabled = false,
 }: GlassCardProps) {
+  const { colors } = useTheme();
   const cardStyle: ViewStyle = {
     borderRadius,
     margin,
     overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: colors.surface + '20',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    shadowColor: '#000',
+    borderColor: colors.text.primary + '30',
+    shadowColor: colors.text.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 10,

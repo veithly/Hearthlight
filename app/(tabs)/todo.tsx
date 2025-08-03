@@ -23,42 +23,47 @@ import HabitCard from '@/components/HabitCard';
 import DatePicker from '@/components/DatePicker';
 import TaskDetailModal from '@/components/TaskDetailModal';
 import GlassBackground from '@/components/GlassBackground';
+import { useTheme } from '@/lib/theme';
+import { useI18n } from '@/lib/i18n';
 
 type TodoTab = 'tasks' | 'habits' | 'goals' | 'completed';
 
-const QUADRANTS = [
-  {
-    id: 'urgent-important',
-    title: 'Urgent & Important',
-    subtitle: 'Do First',
-    color: '#EF4444',
-  },
-  {
-    id: 'not-urgent-important',
-    title: 'Important, Not Urgent',
-    subtitle: 'Schedule',
-    color: '#F59E0B',
-  },
-  {
-    id: 'urgent-not-important',
-    title: 'Urgent, Not Important',
-    subtitle: 'Delegate',
-    color: '#8B5CF6',
-  },
-  {
-    id: 'not-urgent-not-important',
-    title: 'Neither Urgent nor Important',
-    subtitle: 'Eliminate',
-    color: '#6B7280',
-  },
-];
-
-const HABIT_COLORS = [
-  '#EF4444', '#F59E0B', '#10B981', '#3B82F6',
-  '#8B5CF6', '#EC4899', '#14B8A6', '#F97316',
-];
-
 export default function TodoScreen() {
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  
+  const HABIT_COLORS = [
+    colors.semantic.error, colors.semantic.warning, colors.semantic.success, colors.primary[500],
+    colors.accent[500], '#EC4899', '#14B8A6', '#F97316',
+  ];
+  
+  const QUADRANTS = [
+    {
+      id: 'urgent-important',
+      title: t('tasks.urgent_important'),
+      subtitle: t('tasks.do_first'),
+      color: colors.semantic.error,
+    },
+    {
+      id: 'not-urgent-important',
+      title: t('tasks.important_not_urgent'),
+      subtitle: t('tasks.schedule'),
+      color: colors.semantic.warning,
+    },
+    {
+      id: 'urgent-not-important',
+      title: t('tasks.urgent_not_important'),
+      subtitle: t('tasks.delegate'),
+      color: colors.primary[500],
+    },
+    {
+      id: 'not-urgent-not-important',
+      title: t('tasks.neither_urgent_nor_important'),
+      subtitle: t('tasks.eliminate'),
+      color: colors.text.tertiary,
+    },
+  ];
+  
   const [activeTab, setActiveTab] = useState<TodoTab>('tasks');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
@@ -125,7 +130,7 @@ export default function TodoScreen() {
 
   const saveTask = async () => {
     if (!newTask.title.trim()) {
-      Alert.alert('Error', 'Please enter a task title');
+      Alert.alert(t('tasks.error'), t('tasks.please_enter_task_title'));
       return;
     }
 
@@ -163,7 +168,7 @@ export default function TodoScreen() {
 
   const saveHabit = async () => {
     if (!newHabit.name.trim()) {
-      Alert.alert('Error', 'Please enter a habit name');
+      Alert.alert(t('tasks.error'), t('tasks.please_enter_habit_name'));
       return;
     }
 
@@ -196,7 +201,7 @@ export default function TodoScreen() {
 
   const saveGoal = async () => {
     if (!newGoal.title.trim() || !newGoal.targetDate) {
-      Alert.alert('Error', 'Please fill in title and target date');
+      Alert.alert(t('tasks.error'), t('tasks.please_fill_title_and_target_date'));
       return;
     }
 
@@ -261,7 +266,7 @@ export default function TodoScreen() {
       }
     } catch (error) {
       console.error('Error toggling task:', error);
-      Alert.alert('Error', 'Failed to update task');
+      Alert.alert(t('tasks.error'), t('tasks.failed_to_update_task'));
     }
   };
 
@@ -367,7 +372,7 @@ export default function TodoScreen() {
       const activeProvider = settings.ai.providers.find(p => p.id === settings.ai.activeProvider);
 
       if (!activeProvider || !activeProvider.enabled || !settings.ai.features.autoSuggestions) {
-        Alert.alert('AI Assistant', 'Please configure an AI provider and enable task suggestions in the AI Assistant tab first.');
+        Alert.alert(t('tasks.ai_assistant'), t('tasks.please_configure_ai_provider'));
         return;
       }
 
@@ -377,12 +382,12 @@ export default function TodoScreen() {
 
       if (suggestions.length > 0) {
         Alert.alert(
-          'AI Task Suggestions',
+          t('tasks.ai_task_suggestions'),
           `The AI has suggested ${suggestions.length} new tasks. Would you like to add them to your list?`,
           [
-            { text: 'Cancel', style: 'cancel' },
+            { text: t('tasks.cancel'), style: 'cancel' },
             {
-              text: 'Add All',
+              text: t('tasks.add_all'),
               onPress: async () => {
                 const updatedTasks = [...tasks, ...suggestions];
                 setTasks(updatedTasks);
@@ -392,11 +397,11 @@ export default function TodoScreen() {
           ]
         );
       } else {
-        Alert.alert('AI Assistant', 'No new task suggestions at this time.');
+        Alert.alert(t('tasks.ai_assistant'), t('tasks.no_new_task_suggestions'));
       }
     } catch (error) {
       console.error('Failed to generate task suggestions:', error);
-      Alert.alert('AI Assistant', 'Unable to generate task suggestions at this time.');
+      Alert.alert(t('tasks.ai_assistant'), t('tasks.unable_to_generate_suggestions'));
     }
   };
 
@@ -419,7 +424,11 @@ export default function TodoScreen() {
           <View style={styles.tabContent}>
             <View style={styles.sortIndicator}>
               <Text style={styles.sortText}>
-                Sorted by: {sortBy === 'created' ? 'Created Date' : sortBy === 'dueDate' ? 'Due Date' : 'Priority'}
+                {t('tasks.sorted_by', { 
+                  sort: sortBy === 'created' ? t('tasks.created_date') : 
+                         sortBy === 'dueDate' ? t('tasks.due_date_sort') : 
+                         t('tasks.priority_sort') 
+                })}
               </Text>
             </View>
 
@@ -449,7 +458,7 @@ export default function TodoScreen() {
                         </Text>
                         {stats.overdue > 0 && (
                           <View style={styles.overdueIndicator}>
-                            <AlertCircle size={12} color="#EF4444" />
+                            <AlertCircle size={12} color={colors.semantic.error} />
                             <Text style={styles.overdueText}>{stats.overdue}</Text>
                           </View>
                         )}
@@ -484,7 +493,7 @@ export default function TodoScreen() {
               return stats.total > 0;
             }).length === 0 && (
               <View style={styles.emptyState}>
-                <CheckSquare size={48} color="#D1D5DB" />
+                <CheckSquare size={48} color={colors.text.tertiary} />
                 <Text style={styles.emptyTitle}>No tasks yet</Text>
                 <Text style={styles.emptySubtitle}>
                   Create your first task to get started with the Eisenhower Matrix
@@ -499,13 +508,13 @@ export default function TodoScreen() {
           <View style={styles.tabContent}>
             <View style={styles.statsGrid}>
               <View style={styles.statCard}>
-                <TrendingUp size={20} color="#10B981" />
+                <TrendingUp size={20} color={colors.semantic.success} />
                 <Text style={styles.statNumber}>{getOverallStats().completedHabitsToday}/{getOverallStats().totalHabits}</Text>
                 <Text style={styles.statLabel}>Today</Text>
               </View>
 
               <View style={styles.statCard}>
-                <Calendar size={20} color="#3B82F6" />
+                <Calendar size={20} color={colors.primary[500]} />
                 <Text style={styles.statNumber}>
                   {habits.length > 0 ? Math.round(habits.reduce((sum, h) => sum + h.currentStreak, 0) / habits.length) : 0}
                 </Text>
@@ -513,7 +522,7 @@ export default function TodoScreen() {
               </View>
 
               <View style={styles.statCard}>
-                <Award size={20} color="#F59E0B" />
+                <Award size={20} color={colors.semantic.warning} />
                 <Text style={styles.statNumber}>
                   {Math.max(...habits.map(h => h.longestStreak), 0)}
                 </Text>
@@ -602,14 +611,14 @@ export default function TodoScreen() {
                 Completed Tasks ({completedTasks.length})
               </Text>
               <TouchableOpacity style={styles.searchButton}>
-                <Search size={20} color="#6B7280" />
+                <Search size={20} color={colors.text.tertiary} />
               </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.completedList}>
               {completedTasks.length === 0 ? (
                 <View style={styles.completedEmptyState}>
-                  <Archive size={48} color="#D1D5DB" />
+                  <Archive size={48} color={colors.text.tertiary} />
                   <Text style={styles.emptyStateText}>No completed tasks yet</Text>
                   <Text style={styles.emptyStateSubtext}>
                     Complete some tasks to see them here
@@ -653,15 +662,610 @@ export default function TodoScreen() {
     }
   };
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: 'transparent',
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+    },
+    title: {
+      fontFamily: 'Poppins-Bold',
+      fontSize: 28,
+    },
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    sortButton: {
+      borderRadius: 12,
+      width: 40,
+      height: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 12,
+    },
+    addButton: {
+      borderRadius: 16,
+      width: 48,
+      height: 48,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    tabBar: {
+      paddingHorizontal: 20,
+      marginBottom: 20,
+    },
+    tab: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      marginRight: 12,
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.neutral[200],
+    },
+    activeTab: {
+      backgroundColor: colors.primary[100],
+      borderColor: colors.primary[500],
+    },
+    tabText: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 14,
+      color: colors.text.tertiary,
+      marginLeft: 8,
+    },
+    activeTabText: {
+      color: colors.primary[500],
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: 20,
+    },
+    tabContent: {
+      paddingBottom: 20,
+    },
+    sortIndicator: {
+      marginBottom: 16,
+    },
+    sortText: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 12,
+      color: colors.text.tertiary,
+    },
+    quadrantsGrid: {
+      paddingBottom: 20,
+    },
+    quadrantContainer: {
+      marginBottom: 20,
+    },
+    quadrantHeader: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 16,
+      borderLeftWidth: 4,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      shadowColor: colors.text.inverse,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    quadrantTitle: {
+      fontFamily: 'Poppins-SemiBold',
+      fontSize: 16,
+      color: colors.text.primary,
+    },
+    quadrantSubtitle: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 12,
+      color: colors.text.tertiary,
+      marginTop: 2,
+    },
+    statsContainer: {
+      alignItems: 'flex-end',
+    },
+    statsText: {
+      fontFamily: 'Inter-SemiBold',
+      fontSize: 12,
+      color: colors.text.tertiary,
+      backgroundColor: colors.neutral[100],
+      borderRadius: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+    },
+    overdueIndicator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 4,
+    },
+    overdueText: {
+      fontFamily: 'Inter-SemiBold',
+      fontSize: 10,
+      color: colors.semantic.error,
+      marginLeft: 2,
+    },
+    tasksContainer: {
+      marginTop: 12,
+    },
+    emptyText: {
+      fontFamily: 'Inter-Regular',
+      fontSize: 14,
+      color: colors.text.tertiary,
+      textAlign: 'center',
+      paddingVertical: 20,
+    },
+    statsGrid: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 20,
+    },
+    statCard: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 16,
+      alignItems: 'center',
+      marginHorizontal: 4,
+      shadowColor: colors.text.inverse,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    statNumber: {
+      fontFamily: 'Poppins-Bold',
+      fontSize: 20,
+      color: colors.text.primary,
+      marginTop: 8,
+      marginBottom: 4,
+    },
+    statLabel: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 12,
+      color: colors.text.tertiary,
+    },
+    emptyState: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 60,
+    },
+    emptyTitle: {
+      fontFamily: 'Poppins-SemiBold',
+      fontSize: 20,
+      color: colors.text.primary,
+      marginBottom: 8,
+    },
+    emptySubtitle: {
+      fontFamily: 'Inter-Regular',
+      fontSize: 16,
+      color: colors.text.secondary,
+      textAlign: 'center',
+      marginBottom: 24,
+    },
+    goalTypeTabs: {
+      flexDirection: 'row',
+      backgroundColor: colors.neutral[100],
+      borderRadius: 12,
+      padding: 4,
+      marginBottom: 20,
+    },
+    goalTypeTab: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    goalTypeTabText: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 14,
+      color: colors.text.tertiary,
+    },
+    goalCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 20,
+      marginBottom: 16,
+      shadowColor: colors.text.inverse,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    goalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    goalTitle: {
+      fontFamily: 'Poppins-SemiBold',
+      fontSize: 16,
+      color: colors.text.primary,
+      flex: 1,
+    },
+    goalStatus: {
+      backgroundColor: colors.neutral[100],
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+    },
+    goalStatusCompleted: {
+      backgroundColor: colors.semantic.success + '20',
+    },
+    goalStatusText: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 12,
+      color: colors.text.tertiary,
+      textTransform: 'capitalize',
+    },
+    goalStatusTextCompleted: {
+      color: colors.semantic.success,
+    },
+    goalDescription: {
+      fontFamily: 'Inter-Regular',
+      fontSize: 14,
+      color: colors.text.secondary,
+      lineHeight: 20,
+      marginBottom: 16,
+    },
+    goalProgress: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    progressBar: {
+      flex: 1,
+      height: 8,
+      backgroundColor: colors.neutral[100],
+      borderRadius: 4,
+      marginRight: 12,
+    },
+    progressFill: {
+      height: '100%',
+      backgroundColor: colors.primary[500],
+      borderRadius: 4,
+    },
+    progressText: {
+      fontFamily: 'Inter-SemiBold',
+      fontSize: 12,
+      color: colors.text.tertiary,
+    },
+    goalMeta: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    goalCategory: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 12,
+      color: colors.primary[500],
+      textTransform: 'capitalize',
+    },
+    goalType: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 12,
+      color: colors.text.tertiary,
+    },
+    goalDate: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 12,
+      color: colors.text.tertiary,
+    },
+    modalContainer: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.neutral[200],
+      backgroundColor: colors.surface,
+    },
+    cancelButton: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 16,
+      color: colors.text.tertiary,
+    },
+    modalTitle: {
+      fontFamily: 'Poppins-SemiBold',
+      fontSize: 18,
+      color: colors.text.primary,
+    },
+    saveButton: {
+      fontFamily: 'Inter-SemiBold',
+      fontSize: 16,
+      color: colors.primary[500],
+    },
+    modalContent: {
+      flex: 1,
+      padding: 20,
+    },
+    titleInput: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 16,
+      fontFamily: 'Poppins-SemiBold',
+      fontSize: 18,
+      color: colors.text.primary,
+      marginBottom: 16,
+    },
+    descriptionInput: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 16,
+      fontFamily: 'Inter-Regular',
+      fontSize: 16,
+      color: colors.text.primary,
+      minHeight: 100,
+      marginBottom: 20,
+    },
+    prioritySection: {
+      marginBottom: 20,
+    },
+    sectionTitle: {
+      fontFamily: 'Inter-SemiBold',
+      fontSize: 16,
+      color: colors.text.primary,
+      marginBottom: 12,
+    },
+    priorityOptions: {
+      flexDirection: 'row',
+      backgroundColor: colors.neutral[100],
+      borderRadius: 12,
+      padding: 4,
+    },
+    priorityOption: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    selectedPriority: {
+      backgroundColor: colors.surface,
+      shadowColor: colors.text.inverse,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    priorityText: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 14,
+      color: colors.text.tertiary,
+    },
+    selectedPriorityText: {
+      color: colors.text.primary,
+    },
+    dueDateSection: {
+      marginBottom: 20,
+    },
+    quadrantSelector: {
+      marginBottom: 20,
+    },
+    quadrantOption: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: colors.neutral[200],
+    },
+    quadrantOptionText: {
+      fontFamily: 'Inter-SemiBold',
+      fontSize: 14,
+      color: colors.text.primary,
+    },
+    quadrantOptionSubtext: {
+      fontFamily: 'Inter-Regular',
+      fontSize: 12,
+      color: colors.text.tertiary,
+      marginTop: 2,
+    },
+    colorSelector: {
+      marginBottom: 20,
+    },
+    colorGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+    },
+    colorOption: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      marginBottom: 12,
+      borderWidth: 3,
+      borderColor: 'transparent',
+    },
+    selectedColor: {
+      borderColor: colors.text.inverse,
+      shadowColor: colors.text.inverse,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+      elevation: 4,
+    },
+    frequencySelector: {
+      marginBottom: 20,
+    },
+    frequencyOptions: {
+      flexDirection: 'row',
+      backgroundColor: colors.neutral[100],
+      borderRadius: 12,
+      padding: 4,
+    },
+    frequencyOption: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    selectedFrequency: {
+      backgroundColor: colors.surface,
+      shadowColor: colors.text.inverse,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    frequencyText: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 14,
+      color: colors.text.tertiary,
+    },
+    selectedFrequencyText: {
+      color: colors.text.primary,
+    },
+    goalTypeSelector: {
+      marginBottom: 20,
+    },
+    typeOptions: {
+      flexDirection: 'row',
+      backgroundColor: colors.neutral[100],
+      borderRadius: 12,
+      padding: 4,
+    },
+    typeOption: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    selectedType: {
+      backgroundColor: colors.surface,
+      shadowColor: colors.text.inverse,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    typeText: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 14,
+      color: colors.text.tertiary,
+    },
+    selectedTypeText: {
+      color: colors.text.primary,
+    },
+    // Completed tasks styles
+    completedHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    completedTitle: {
+      fontFamily: 'Poppins-SemiBold',
+      fontSize: 18,
+      color: colors.text.primary,
+    },
+    searchButton: {
+      padding: 8,
+      borderRadius: 8,
+      backgroundColor: colors.neutral[100],
+    },
+    completedList: {
+      flex: 1,
+    },
+    completedEmptyState: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 60,
+    },
+    emptyStateText: {
+      fontFamily: 'Poppins-SemiBold',
+      fontSize: 18,
+      color: colors.text.tertiary,
+      marginTop: 16,
+    },
+    emptyStateSubtext: {
+      fontFamily: 'Inter-Regular',
+      fontSize: 14,
+      color: colors.text.tertiary,
+      marginTop: 4,
+    },
+    completedTaskCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 12,
+      shadowColor: colors.text.inverse,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    completedTaskHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: 8,
+    },
+    completedTaskTitle: {
+      fontFamily: 'Poppins-SemiBold',
+      fontSize: 16,
+      color: colors.text.primary,
+      flex: 1,
+      marginRight: 12,
+    },
+    completedTaskDate: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 12,
+      color: colors.text.tertiary,
+    },
+    completedTaskDescription: {
+      fontFamily: 'Inter-Regular',
+      fontSize: 14,
+      color: colors.text.secondary,
+      marginBottom: 12,
+      lineHeight: 20,
+    },
+    completedTaskMeta: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    completedTaskQuadrant: {
+      backgroundColor: colors.neutral[100],
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 6,
+    },
+    completedTaskQuadrantText: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 12,
+      color: colors.text.tertiary,
+    },
+    completedTaskTime: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 12,
+      color: colors.primary[500],
+    },
+  });
+
   return (
     <GlassBackground>
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.header}>
-          <Text style={styles.title}>Todo</Text>
+          <Text style={[styles.title, { color: colors.text.primary }]}>{t('tasks.title')}</Text>
           <View style={styles.headerActions}>
             {activeTab === 'tasks' && (
               <TouchableOpacity
-                style={styles.sortButton}
+                style={[styles.sortButton, { backgroundColor: colors.surface }]}
                 onPress={() => {
                   const sortOptions = ['created', 'dueDate', 'priority'];
                   const currentIndex = sortOptions.indexOf(sortBy);
@@ -669,18 +1273,18 @@ export default function TodoScreen() {
                   setSortBy(sortOptions[nextIndex] as any);
                 }}
               >
-                <Filter size={20} color="#6B7280" />
+                <Filter size={20} color={colors.text.tertiary} />
               </TouchableOpacity>
             )}
             <TouchableOpacity
-              style={styles.addButton}
+              style={[styles.addButton, { backgroundColor: colors.primary[500] }]}
               onPress={() => {
                 if (activeTab === 'tasks') setShowNewTask(true);
                 else if (activeTab === 'habits') setShowNewHabit(true);
                 else if (activeTab === 'goals') setShowNewGoal(true);
               }}
             >
-              <Plus size={24} color="#FFFFFF" />
+              <Plus size={24} color={colors.text.inverse} />
             </TouchableOpacity>
           </View>
         </View>
@@ -688,10 +1292,10 @@ export default function TodoScreen() {
       <View style={styles.tabBar}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {[
-            { id: 'tasks', label: 'Tasks', icon: CheckSquare },
-            { id: 'habits', label: 'Habits', icon: Zap },
-            { id: 'goals', label: 'Goals', icon: Target },
-            { id: 'completed', label: 'Completed', icon: Archive },
+            { id: 'tasks', label: t('tasks.tasks'), icon: CheckSquare },
+            { id: 'habits', label: t('tasks.habits'), icon: Zap },
+            { id: 'goals', label: t('tasks.goals'), icon: Target },
+            { id: 'completed', label: t('tasks.completed_tasks'), icon: Archive },
           ].map((tab) => {
             const IconComponent = tab.icon;
             return (
@@ -705,7 +1309,7 @@ export default function TodoScreen() {
               >
                 <IconComponent
                   size={16}
-                  color={activeTab === tab.id ? '#8B5CF6' : '#6B7280'}
+                  color={activeTab === tab.id ? colors.accent[500] : colors.text.tertiary}
                 />
                 <Text
                   style={[
@@ -745,20 +1349,20 @@ export default function TodoScreen() {
           <ScrollView style={styles.modalContent}>
             <TextInput
               style={styles.titleInput}
-              placeholder="Task title..."
+              placeholder={t('tasks.task_title_placeholder')}
               value={newTask.title}
               onChangeText={(text) => setNewTask({ ...newTask, title: text })}
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.text.tertiary}
             />
 
             <TextInput
               style={styles.descriptionInput}
-              placeholder="Description (optional)..."
+              placeholder={t('tasks.task_description_placeholder')}
               value={newTask.description}
               onChangeText={(text) => setNewTask({ ...newTask, description: text })}
               multiline
               textAlignVertical="top"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.text.tertiary}
             />
 
             <View style={styles.prioritySection}>
@@ -791,7 +1395,7 @@ export default function TodoScreen() {
               <DatePicker
                 value={newTask.dueDate}
                 onChange={(date) => setNewTask({ ...newTask, dueDate: date })}
-                placeholder="Select due date"
+                placeholder={t('tasks.select_due_date')}
               />
             </View>
 
@@ -811,7 +1415,7 @@ export default function TodoScreen() {
                   <Text
                     style={[
                       styles.quadrantOptionText,
-                      newTask.quadrant === quadrant.id && { color: '#FFFFFF' },
+                      newTask.quadrant === quadrant.id && { color: colors.text.inverse },
                     ]}
                   >
                     {quadrant.title}
@@ -819,7 +1423,7 @@ export default function TodoScreen() {
                   <Text
                     style={[
                       styles.quadrantOptionSubtext,
-                      newTask.quadrant === quadrant.id && { color: '#FFFFFF' },
+                      newTask.quadrant === quadrant.id && { color: colors.text.inverse },
                     ]}
                   >
                     {quadrant.subtitle}
@@ -851,20 +1455,20 @@ export default function TodoScreen() {
           <ScrollView style={styles.modalContent}>
             <TextInput
               style={styles.titleInput}
-              placeholder="Habit name..."
+              placeholder={t('tasks.habit_name_placeholder')}
               value={newHabit.name}
               onChangeText={(text) => setNewHabit({ ...newHabit, name: text })}
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.text.tertiary}
             />
 
             <TextInput
               style={styles.descriptionInput}
-              placeholder="Description (optional)..."
+              placeholder={t('tasks.habit_description_placeholder')}
               value={newHabit.description}
               onChangeText={(text) => setNewHabit({ ...newHabit, description: text })}
               multiline
               textAlignVertical="top"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.text.tertiary}
             />
 
             <View style={styles.colorSelector}>
@@ -946,20 +1550,20 @@ export default function TodoScreen() {
           <ScrollView style={styles.modalContent}>
             <TextInput
               style={styles.titleInput}
-              placeholder="Goal title..."
+              placeholder={t('tasks.goal_title_placeholder')}
               value={newGoal.title}
               onChangeText={(text) => setNewGoal({ ...newGoal, title: text })}
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.text.tertiary}
             />
 
             <TextInput
               style={styles.descriptionInput}
-              placeholder="Goal description..."
+              placeholder={t('tasks.goal_description_placeholder')}
               value={newGoal.description}
               onChangeText={(text) => setNewGoal({ ...newGoal, description: text })}
               multiline
               textAlignVertical="top"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.text.tertiary}
             />
 
             <View style={styles.dueDateSection}>
@@ -967,7 +1571,7 @@ export default function TodoScreen() {
               <DatePicker
                 value={newGoal.targetDate}
                 onChange={(date) => setNewGoal({ ...newGoal, targetDate: date })}
-                placeholder="Select target date"
+                placeholder={t('tasks.select_target_date')}
               />
             </View>
 
@@ -1040,602 +1644,5 @@ export default function TodoScreen() {
     </SafeAreaView>
     </GlassBackground>
   );
-}
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  title: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 28,
-    color: '#111827',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sortButton: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  addButton: {
-    backgroundColor: '#8B5CF6',
-    borderRadius: 16,
-    width: 48,
-    height: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  tabBar: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  tab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 12,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  activeTab: {
-    backgroundColor: '#F3F4F6',
-    borderColor: '#8B5CF6',
-  },
-  tabText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 14,
-    color: '#6B7280',
-    marginLeft: 8,
-  },
-  activeTabText: {
-    color: '#8B5CF6',
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  tabContent: {
-    paddingBottom: 20,
-  },
-  sortIndicator: {
-    marginBottom: 16,
-  },
-  sortText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  quadrantsGrid: {
-    paddingBottom: 20,
-  },
-  quadrantContainer: {
-    marginBottom: 20,
-  },
-  quadrantHeader: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    borderLeftWidth: 4,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  quadrantTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#111827',
-  },
-  quadrantSubtitle: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  statsContainer: {
-    alignItems: 'flex-end',
-  },
-  statsText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 12,
-    color: '#6B7280',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  overdueIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  overdueText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 10,
-    color: '#EF4444',
-    marginLeft: 2,
-  },
-  tasksContainer: {
-    marginTop: 12,
-  },
-  emptyText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    color: '#9CA3AF',
-    textAlign: 'center',
-    paddingVertical: 20,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    marginHorizontal: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  statNumber: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 20,
-    color: '#111827',
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 20,
-    color: '#111827',
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  goalTypeTabs: {
-    flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 20,
-  },
-  goalTypeTab: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  goalTypeTabText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  goalCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  goalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  goalTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#111827',
-    flex: 1,
-  },
-  goalStatus: {
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  goalStatusCompleted: {
-    backgroundColor: '#D1FAE5',
-  },
-  goalStatusText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    color: '#6B7280',
-    textTransform: 'capitalize',
-  },
-  goalStatusTextCompleted: {
-    color: '#10B981',
-  },
-  goalDescription: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    color: '#4B5563',
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  goalProgress: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  progressBar: {
-    flex: 1,
-    height: 8,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 4,
-    marginRight: 12,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#8B5CF6',
-    borderRadius: 4,
-  },
-  progressText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  goalMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  goalCategory: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    color: '#8B5CF6',
-    textTransform: 'capitalize',
-  },
-  goalType: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  goalDate: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-  },
-  cancelButton: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  modalTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: '#111827',
-  },
-  saveButton: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
-    color: '#8B5CF6',
-  },
-  modalContent: {
-    flex: 1,
-    padding: 20,
-  },
-  titleInput: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: '#111827',
-    marginBottom: 16,
-  },
-  descriptionInput: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    fontFamily: 'Inter-Regular',
-    fontSize: 16,
-    color: '#111827',
-    minHeight: 100,
-    marginBottom: 20,
-  },
-  prioritySection: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
-    color: '#111827',
-    marginBottom: 12,
-  },
-  priorityOptions: {
-    flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    padding: 4,
-  },
-  priorityOption: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  selectedPriority: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  priorityText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  selectedPriorityText: {
-    color: '#111827',
-  },
-  dueDateSection: {
-    marginBottom: 20,
-  },
-  quadrantSelector: {
-    marginBottom: 20,
-  },
-  quadrantOption: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  quadrantOptionText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 14,
-    color: '#111827',
-  },
-  quadrantOptionSubtext: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  colorSelector: {
-    marginBottom: 20,
-  },
-  colorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  colorOption: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginBottom: 12,
-    borderWidth: 3,
-    borderColor: 'transparent',
-  },
-  selectedColor: {
-    borderColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  frequencySelector: {
-    marginBottom: 20,
-  },
-  frequencyOptions: {
-    flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    padding: 4,
-  },
-  frequencyOption: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  selectedFrequency: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  frequencyText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  selectedFrequencyText: {
-    color: '#111827',
-  },
-  goalTypeSelector: {
-    marginBottom: 20,
-  },
-  typeOptions: {
-    flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    padding: 4,
-  },
-  typeOption: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  selectedType: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  typeText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  selectedTypeText: {
-    color: '#111827',
-  },
-  // Completed tasks styles
-  completedHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  completedTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: '#111827',
-  },
-  searchButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
-  },
-  completedList: {
-    flex: 1,
-  },
-  completedEmptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyStateText: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 18,
-    color: '#6B7280',
-    marginTop: 16,
-  },
-  emptyStateSubtext: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    color: '#9CA3AF',
-    marginTop: 4,
-  },
-  completedTaskCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  completedTaskHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  completedTaskTitle: {
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 16,
-    color: '#111827',
-    flex: 1,
-    marginRight: 12,
-  },
-  completedTaskDate: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  completedTaskDescription: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 12,
-    lineHeight: 20,
-  },
-  completedTaskMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  completedTaskQuadrant: {
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  completedTaskQuadrantText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  completedTaskTime: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    color: '#8B5CF6',
-  },
-});
+  }

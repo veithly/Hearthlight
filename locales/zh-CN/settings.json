@@ -1,0 +1,21 @@
+{
+  "language": "语言",
+  "theme": "主题",
+  "notifications": "通知",
+  "privacy": "隐私",
+  "account": "账户",
+  "general": "通用",
+  "appearance": "外观",
+  "accessibility": "无障碍",
+  "data": "数据与存储",
+  "backup": "备份",
+  "export": "导出",
+  "import": "导入",
+  "reset": "重置",
+  "version": "版本",
+  "build": "构建",
+  "feedback": "反馈",
+  "support": "支持",
+  "terms": "服务条款",
+  "privacy_policy": "隐私政策"
+}
